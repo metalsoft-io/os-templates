@@ -1,5 +1,5 @@
 os-template:
-    boot-type: classic
+    boot-type: classic_only
     boot-methods-supported: local_drives
     os-architecture: x86_64
     os-ready-method: wait_for_power_off

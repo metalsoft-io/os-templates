@@ -1,5 +1,5 @@
 os-template:
-    boot-type: uefi
+    boot-type: uefi_only
     boot-methods-supported: pxe_iscsi
     os-architecture: x86_64
     os-ready-method: wait_for_power_off
@@ -12,8 +12,8 @@ assets:
     almalinux-install.ipxe:
         isopath: /bin/almalinux-install.ipxe
         mime: text/plain
-    amlalinux-regular-boot.ipxe:
-        isopath: /bin/amlalinux-regular-boot.ipxe
+    almalinux-regular-boot.ipxe:
+        isopath: /bin/almalinux-regular-boot.ipxe
         mime: text/plain
     ks-iscsi.cfg:
         isopath: /bin/amlalinux-regular-boot.ipxe
