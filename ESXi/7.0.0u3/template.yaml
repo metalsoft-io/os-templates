@@ -20,3 +20,18 @@ assets:
         isopath: /KS.CFG
         mime: text/plain
         is-kickstart-file: true
+    dynamic_file_1.jpg:
+        isopath: /dynamic_file_1.jpg
+        mime: text/plain
+    dynamic_file_2.png:
+        isopath: /dynamic_file_2.png
+        mime: text/plain
+    dynamic_file_3.jpg:
+        isopath: /dynamic_file_3.jpg
+        mime: text/plain
+    binary_file_1.bin:
+        isopath: /binary_file_1.bin
+        mime: application/octet-stream
+    binary_file_2.bin:
+        isopath: /binary_file_2.bin
+        mime: application/octet-stream
