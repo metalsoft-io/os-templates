@@ -1,0 +1,219 @@
+#cloud-config
+# https://ubuntu.com/server/docs/install/autoinstall
+autoinstall:
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#version
+
+  version: 1
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#interactive-sections
+  # interactive-sections:
+    #  - storage
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#early-commands
+  early-commands:
+    - systemctl stop open-iscsi.service
+    - echo "InitiatorName={{iscsi_initiator_iqn}}" > /etc/iscsi/initiatorname.iscsi
+    - iscsiadm --mode discoverydb --type sendtargets --portal {{iscsi_drive_target_0}} --discover
+    - iscsiadm --mode node --targetname "{{iscsi_drive_target_iqn_0}}" --portal {{iscsi_drive_target_0}}:{{iscsi_drive_port_0}} --op update --name node.session.auth.authmethod --value=CHAP
+    - iscsiadm --mode node --targetname "{{iscsi_drive_target_iqn_0}}" --portal {{iscsi_drive_target_0}}:{{iscsi_drive_port_0}} --op update --name node.session.auth.username --value={{iscsi_chap_username}}
+    - iscsiadm --mode node --targetname "{{iscsi_drive_target_iqn_0}}" --portal {{iscsi_drive_target_0}}:{{iscsi_drive_port_0}} --op update --name node.session.auth.password --value={{iscsi_chap_password}}
+    - iscsiadm --mode node --targetname "{{iscsi_drive_target_iqn_0}}" --portal {{iscsi_drive_target_0}}:{{iscsi_drive_port_0}} --login
+    # - iscsistart -i {{iscsi_initiator_iqn}} -t {{iscsi_drive_target_iqn_0}} -g N -a {{iscsi_drive_target_0}} -p {{iscsi_drive_port_0}} -u {{iscsi_chap_username}} -w {{iscsi_chap_password}}
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#locale
+  locale: en_US.utf8
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#refresh-installer
+  refresh-installer:
+    update: no
+    channel: "stable/ubuntu-$REL"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#keyboard
+  keyboard:
+    layout: "us"
+    variant: ""
+    toggle:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#network
+  # https://cloudinit.readthedocs.io/en/latest/topics/network-config.html
+  # https://netplan.io/reference
+  # network:
+  #   version: 2
+  #   renderer: networkd
+  #   ethernets:
+  #     san0:
+  #       critical: true
+  #       dhcp-identifier: mac
+  #       dhcp4: true
+  #       match:
+  #         macaddress: {{san_interface_0_mac_address}}
+  #       set-name: san0
+  #       nameservers:
+  #         addresses:
+  #         - {{dns_server_ip_0}}
+  #         - {{dns_server_ip_1}}
+  #     wan0:
+  #       critical: true
+  #       dhcp-identifier: mac
+  #       dhcp4: true
+  #       match:
+  #         macaddress: {{wan_interface_0_mac_address}}
+  #       set-name: wan0
+  #       nameservers:
+  #         addresses:
+  #         - {{dns_server_ip_0}}
+  #         - {{dns_server_ip_1}}
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#proxy
+  # proxy:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#apt
+  # https://curtin.readthedocs.io/en/latest/topics/apt_source.html
+  apt:
+    preserve_sources_list: false
+    primary:
+      - arches: [i386, amd64]
+        uri: "http://archive.ubuntu.com/ubuntu"
+      - arches: [default]
+        uri: "http://ports.ubuntu.com/ubuntu-ports"
+    geoip: true
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#storage
+  # a superset of that supported by curtin: https://curtin.readthedocs.io/en/latest/topics/storage.html
+  # The extensions to the curtin syntax are around disk selection and partition/logical volume sizing.
+  storage:
+    layout:
+      name: lvm
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#identity
+  # optional in case the user-data section is present
+  # identity:
+  #   hostname: {{instance_subdomain_permanent}}
+  #   username: root
+  #   lock_passwd: false
+  #   password: "$6$rounds=4096$U3QtQs.SsIn2Q$JkcpdGBtSTULpz7T3nkDIERIfHPZhGDAfwDcfnf9UzBDiu5Bp7e/ENlIGlPhroUkBRNAMydDzjrIv5i4YH5So/"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#ssh
+  ssh:
+    install-server: true
+    authorized-keys:
+      - {{management_ssh_key}}
+    allow-pw: true
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#snaps
+  # snaps:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#debconf-selections
+  # debconf-selections:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#packages
+  packages:
+    - open-iscsi
+    - initramfs-tools
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gnupg
+    - lsb-release
+    - software-properties-common
+    - python2
+    - acpid
+    - snmpd
+    # - ntp
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#late-commands
+  late-commands:
+    - (echo "iscsi_tcp" ; echo "iscsi_ibft" ; echo "iscsi") >> /target/etc/initramfs-tools/modules
+    - echo "ISCSI_AUTO=true" > /target/etc/iscsi/iscsi.initramfs
+    - curl {{HTTP_SERVER_ENDPOINT}}/99-san -o /target/etc/networkd-dispatcher/routable.d/99-san
+    - chmod +x /target/etc/networkd-dispatcher/routable.d/99-san
+    - curl {{HTTP_SERVER_ENDPOINT}}/bigstep-iscsi -o /target/usr/share/initramfs-tools/scripts/local-top/bigstep-iscsi
+    - chmod +x /target/usr/share/initramfs-tools/scripts/local-top/bigstep-iscsi
+    # - curl {{HTTP_SERVER_ENDPOINT}}/99-user-asset-config.yaml -o /target/etc/netplan/99-user-asset-config.yaml
+    - curtin in-target --target=/target -- update-initramfs -u
+    - curtin in-target --target=/target -- systemctl disable lvm2-monitor.service
+    - curtin in-target --target=/target -- systemctl disable lvm2-lvmpolld.socket
+    - curtin in-target --target=/target -- update-alternatives --install /usr/bin/python python /usr/bin/python2 2
+    - curtin in-target --target=/target -- update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+    - curtin in-target --target=/target -- update-alternatives --auto python
+    - curtin in-target --target=/target -- curl {{HTTP_SERVER_ENDPOINT}}/snmpd.conf -o /etc/snmp/snmpd.conf
+    - sed -i 's/^GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"iscsi_firmware ip=ibft edd=off\"/g' /target/etc/default/grub
+    - curtin in-target --target=/target -- update-grub
+    - iscsiadm --mode node --targetname "{{iscsi_drive_target_iqn_0}}" --portal {{iscsi_drive_target_0}}:{{iscsi_drive_port_0}} --logout
+    - iscsiadm --mode node --op delete --targetname "{{iscsi_drive_target_iqn_0}}"
+    - iscsiadm --mode discoverydb --op delete --type sendtargets --portal {{iscsi_drive_target_0}}
+    - systemctl disable lvm2-monitor.service
+    - systemctl disable lvm2-lvmpolld.socket lvm2-lvmpolld.service
+    - echo "Done"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#error-commands
+  # Shell commands to run after the install has failed.
+  # error-commands:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#reporting
+  reporting:
+    builtin:
+      type: print
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#user-data
+  user-data:
+    # = Runcmd =
+    # Run commands on first boot
+    runcmd:
+      - rm -f /etc/resolv.conf
+      - ln -s ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+    # = Timezone =
+    timezone: UTC
+    # = NTP =
+    # Override ntp with chrony configuration on Ubuntu
+    # ntp:
+    #   enabled: true
+    #   ntp_client: chrony  # Uses cloud-init default chrony configuration
+    # manage_resolv_conf: true
+    # resolv_conf:
+    #     nameservers: ['{{dns_server_ip_0}}', '{{dns_server_ip_1}}']
+    #     searchdomains:
+    #         - integration.bigstep.io
+    #     domain: integration.bigstep.io
+    #     options:
+    #         rotate: true
+    #         timeout: 1
+    # = Set Hostname/Update Hostname =
+    preserve_hostname: false
+    prefer_fqdn_over_hostname: true
+    fqdn: {{instance_subdomain_permanent}}
+    hostname: {{instance_subdomain_permanent}}
+    # = Set Passwords =
+    ssh_pwauth: true
+    password: {{initial_password}}
+    chpasswd: { expire: false }
+    # = Users and Groups =
+    users:
+      - default
+      - name: root
+        lock_passwd: false
+        # https://cloudinit.readthedocs.io/en/latest/topics/examples.html
+        # plain_text_passwd: {{initial_password}}
+        # Setup00!
+        # hashed_passwd: '$6$rounds=4096$U3QtQs.SsIn2Q$JkcpdGBtSTULpz7T3nkDIERIfHPZhGDAfwDcfnf9UzBDiu5Bp7e/ENlIGlPhroUkBRNAMydDzjrIv5i4YH5So/'
+    # = Growpart =
+    growpart:
+      mode: auto
+      devices: ['/']
+      ignore_growroot_disabled: false
+    # = SSH =
+    ssh_deletekeys: true
+    ssh_genkeytypes: [rsa, ecdsa, ed25519]
+    disable_root: false
+    allow_public_ssh_keys: true
+    # SSH Authkey Fingerprints
+    no_ssh_fingerprints: true
+    authkey_hash: sha256
+    # = Keys to Console =
+    ssh:
+      emit_keys_to_console: true
+    # = Package Update Upgrade Install =
+    package_update: false
+    package_upgrade: false
+    package_reboot_if_required: false
+    # = Final Message =
+    final_message: Cloud-init Done!

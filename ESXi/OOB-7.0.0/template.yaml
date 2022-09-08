@@ -1,7 +1,7 @@
 os-template:
-    version: 7.0.0
     boot-type: uefi_only
     boot-methods-supported: local_drives
+    os-version: 7.0.0
     os-architecture: x86_64
     os-ready-method: wait_for_power_off
     image-build-required: true

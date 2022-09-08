@@ -1,0 +1,158 @@
+#!/bin/sh
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+# Check if are in the initramfs environment
+if [ "$BOOT" = "local" ]; then
+   echo "Executing BigStep iSCSI initramfs hook..."
+
+   # Let udev settle down
+   echo "Waiting on udev to settle down...."
+   udevadm settle --timeout=120
+
+   sys_iscsi_target="/sys/firmware/ibft/target0/target-name"
+   if [ -e ${sys_iscsi_target} ]; then
+       read iscsi_target < ${sys_iscsi_target}
+       echo "Found iSCSI target: ${iscsi_target}"
+   else
+       echo "WARNING: did not find ${sys_iscsi_target}"
+   fi
+
+   # Get any iscsi command line parameters - cmdline parsing template taken from init script in initramfs
+   for x in $(cat /proc/cmdline); do
+      case $x in
+            iscsi_ip=*)
+               iscsi_ip=${x#iscsi_ip=}
+               ;;
+            iscsi_iqn=*)
+               iscsi_iqn=${x#iscsi_iqn=}
+               ;;
+            iscsi_user=*)
+               iscsi_user=${x#iscsi_user=}
+               ;;
+            iscsi_pw=*)
+               iscsi_pw=${x#iscsi_pw=}
+               ;;
+            ip=*)
+               ip=${x#ip=}
+               ;;
+
+      esac
+   done # end of cmdline parsing
+   if [ -n "${iscsi_ip}" ]; then
+      iscsi_name='iqn.2000-09.org.local:UNKNOWN'
+   fi
+
+   # Check if an iscsi environment exists and start up the networking environment
+   if [ -e ${sys_iscsi_target} -o -n "${iscsi_ip}" ]; then
+      x=5
+      # Wait up to x seconds for a network interface to pop up
+      echo -n "Searching for network cards..."
+      until ifconfig -a| grep -q Ethernet; do
+         sleep 1
+         echo -n .
+         x=$(($x - 1))
+         if [ $x = 0 ]; then
+            echo "No network cards detected!"
+            exit 0
+         fi
+      done # end of until
+
+      sleep 30
+
+      if [ "${ip}" = "ibft" ]; then
+        echo "Configuring network card using ibft"
+            read mac < /sys/firmware/ibft/ethernet0/mac
+            read ip_addr < /sys/firmware/ibft/ethernet0/ip-addr
+            read subnet_mask < /sys/firmware/ibft/ethernet0/subnet-mask
+            read gateway <  /sys/firmware/ibft/ethernet0/gateway
+            read hostname < /sys/firmware/ibft/ethernet0/hostname
+            read iscsi_ip < /sys/firmware/ibft/target0/ip-addr
+
+            cd /sys/class/net
+            for dev in *; do
+                [ -e $dev/address ] || continue
+                read address < $dev/address
+                [ "$address" ] || continue
+
+                if [ "$address" = "$mac" ]; then
+                   cat <<EOM
+
+ibft configuration:
+    MAC:         ${mac}
+    IP Address:  ${ip_addr}
+    Subnet Mask: ${subnet_mask}
+    Gateway:     ${gateway}
+    Hostname:    ${hostname}
+
+Setting Network configuration:
+    $ip_addr/$subnet_mask on dev $dev
+
+Adding iSCSI target route:
+    $iscsi_ip via $gateway on $dev
+
+Default route is not set.
+
+EOM
+                   ip addr add $ip_addr/$subnet_mask dev $dev
+                   ip link set dev $dev up
+                   ip route add $iscsi_ip via $gateway dev $dev src $ip_addr metric 0
+
+                   mkdir -p /run/initramfs
+                   echo "$dev" > /run/initramfs/open-iscsi.interface
+                   touch /tmp/net-${dev}.conf
+                   break
+               fi
+            done
+      else
+
+              echo "Searching for an dhcp server on all network interfaces..."
+              CNT=5
+              until ifconfig ${netdev}|grep -q "inet addr"; do
+                 # Do a round-robin search for dhcp   servers
+                 for netdev in `ifconfig -a|grep Ethernet|/bin/cut -d' ' -f1`; do
+                    #ip link set ${netdev} mtu 2500       # Optional: increase mtu for performance
+                    ip link set ${netdev} up              # try to bring up the interface
+                    ipconfig -t 2 -c dhcp -d ${netdev}    # Get an IP
+
+                    # If we have got an address, stop         searching.
+                    if ifconfig -a|grep -q "inet addr"; then break 2; fi
+
+                 done # end of netdev probing
+                 CNT=$((${CNT} - 1))
+                 if [ ${CNT} = 0 ]; then
+                    echo "No dhcp servers found!"
+                    exit 0
+                    exit 0
+                 fi
+                 echo "Tries left: ${CNT}"
+              done # end of until
+        fi #end of ibft net if
+
+      # try to login via iscsistart -b, if that works, bail
+      iscsistart -b && exit 0
+
+      if [ -e ${sys_iscsi_target} ]; then
+         #iscsistart -b  # This should get the ibft parameters but it does not yet.
+         # Lets do the following instead
+         read iname < /sys/firmware/ibft/initiator/initiator-name
+         read target_name < /sys/firmware/ibft/target0/target-name
+         read iscsi_ip < /sys/firmware/ibft/target0/ip-addr
+         read chap_name < /sys/firmware/ibft/target0/chap-name
+         read chap_secret < /sys/firmware/ibft/target0/chap-secret
+
+         cat <<EOM
+
+Logging into iSCSI Target:
+    initiator name: ${iname}
+    target:         ${iscsi_target}
+    target ip:      ${iscsi_ip}
+    chap_name:      ${chap_name}
+
+EOM
+         iscsistart -i ${iname} -t ${target_name} -a ${iscsi_ip} -u ${chap_name} -w ${chap_secret} -g 1
+      else
+         iscsistart -i ${iscsi_name} -t ${iscsi_iqn} -a ${iscsi_ip} -u ${iscsi_user} -w ${iscsi_pw} -g 1
+      fi # end of iscsi firmware check
+   fi # end of iscsi env check
+fi  # end of initramfs check
+
