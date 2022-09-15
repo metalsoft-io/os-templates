@@ -1,6 +1,7 @@
 os-template:
     boot-type: uefi_only
     boot-methods-supported: pxe_iscsi
+    os-family: Ubuntu
     os-version: 20.04
     os-architecture: x86_64
     initial-user: ubuntu

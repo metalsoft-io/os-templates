@@ -1,6 +1,7 @@
 os-template:
     boot-type: uefi_only
     boot-methods-supported: local_drives
+    os-family: Windows
     os-version: 2019
     os-architecture: x86_64
     os-ready-method: wait_for_power_off
