@@ -1,7 +1,7 @@
 os-template:
     boot-type: uefi_only
     boot-methods-supported: local_drives
-    os-family: ESXi
+    os-type: ESXi
     os-version: 7.0.0.u03-DellEMC-A02
     os-architecture: x86_64
     os-ready-method: wait_for_power_off

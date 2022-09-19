@@ -1,7 +1,7 @@
 os-template:
     boot-type: uefi_only
     boot-methods-supported: pxe_iscsi
-    os-family: AlmaLinux
+    os-type: AlmaLinux
     os-version: 8
     os-architecture: x86_64
     initial-user: root

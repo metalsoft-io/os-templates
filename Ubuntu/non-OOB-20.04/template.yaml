@@ -1,7 +1,7 @@
 os-template:
     boot-type: uefi_only
     boot-methods-supported: local_drives
-    os-family: Ubuntu
+    os-type: Ubuntu
     os-version: 20.04
     os-architecture: x86_64
     os-ready-method: wait_for_signal_from_os_and_wait_for_power_off
