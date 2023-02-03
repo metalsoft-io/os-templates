@@ -16,23 +16,28 @@ assets:
         mime: text/plain
         usage: build_component
         type: bootloader-config
+        template-type: simple
     txt.cfg:
         isopath: /isolinux/txt.cfg
         mime: text/plain
         usage: build_component
         type: bootloader-config
+        template-type: simple
     user-data:
         isopath: /user-data
         mime: text/plain
         usage: build_component
         type: installer-config
+        template-type: simple
     meta-data:
         isopath: /meta-data
         mime: text/plain
         usage: build_component
         type: installer-config
+        template-type: simple
     vendor-data:
         isopath: /vendor-data
         mime: text/plain
         usage: build_component
         type: installer-config
+        template-type: simple
