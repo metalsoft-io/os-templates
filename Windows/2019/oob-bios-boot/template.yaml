@@ -16,3 +16,4 @@ assets:
         mime: text/plain
         usage: build_component
         type: installer-config
+        template-type: simple

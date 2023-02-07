@@ -17,45 +17,56 @@ assets:
         mime: application/octet-stream
         usage: bootloader
         type: bootloader
+        template-type: none
     ubuntu-install.ipxe:
         path: /ipxe_config_install
         mime: text/plain
         type: bootloader-config
+        template-type: simple
     ubuntu-regular-boot.ipxe:
         path: /ipxe_config_os_boot
         mime: text/plain
         type: bootloader-config
+        template-type: simple
     vmlinuz:
         url: /.tftp/boot/images/Ubuntu-20.04/vmlinuz
         path: /vmlinuz
         mime: application/octet-stream
         type: other
+        template-type: none
     initrd.gz:
         url: /.tftp/boot/images/Ubuntu-20.04/vmlinuz/initrd.gz
         path: /initrd.gz
         mime: application/octet-stream
         type: other
+        template-type: none
     meta-data:
         path: /meta-data
         mime: text/plain
         type: installer-config
+        template-type: simple
     user-data:
         path: /user-data
         mime: text/plain
         type: installer-config
+        template-type: simple
     vendor-data:
         path: /vendor-data
         mime: text/plain
         type: installer-config
+        template-type: simple
     99-san:
         path: /99-san
         mime: text/plain
-        type: other 
+        type: other
+        template-type: simple
     bsi-iscsi:
         path: /bsi-iscsi
         mime: text/plain
-        type: other 
+        type: other
+        template-type: simple
     snmpd.conf:
         path: /snmpd.conf
         mime: text/plain
         type: other
+        template-type: simple
