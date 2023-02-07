@@ -16,13 +16,13 @@ assets:
         mime: application/octet-stream
         usage: bootloader
         type: bootloader
-        template-type: simple
+        template-type: none
     grubx64.efi:
         url: /.tftp/boot/images/Ubuntu-20.04/grubnetx64.efi
         path: /grubx64.efi
         mime: application/octet-stream
         type: bootloader
-        template-type: simple
+        template-type: none
     grubx64.cfg:
         path: /grub/grub.cfg
         mime: text/plain
@@ -33,13 +33,13 @@ assets:
         path: /vmlinuz
         mime: application/octet-stream
         type: other
-        template-type: simple
+        template-type: none
     initrd.gz:
         url: /.tftp/boot/images/Ubuntu-20.04/initrd.gz
         path: /initrd.gz
         mime: application/octet-stream
         type: other
-        template-type: simple
+        template-type: none
     ks.cfg:
         path: /ks.cfg
         mime: text/plain

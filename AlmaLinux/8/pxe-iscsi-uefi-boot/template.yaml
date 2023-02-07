@@ -16,7 +16,7 @@ assets:
         mime: application/octet-stream
         usage: bootloader
         type: bootloader
-        template-type: simple
+        template-type: none
     almalinux-install.ipxe:
         path: /ipxe_config_install
         mime: text/plain
@@ -32,13 +32,13 @@ assets:
         path: /vmlinuz
         mime: application/octet-stream
         type: other
-        template-type: simple
+        template-type: none
     initrd.img:
         url: /.tftp/boot/images/AlmaLinux-8/initrd.img
         path: /initrd.img
         mime: application/octet-stream
         type: other
-        template-type: simple
+        template-type: none
     ks.cfg:
         path: /ks.cfg
         mime: text/plain

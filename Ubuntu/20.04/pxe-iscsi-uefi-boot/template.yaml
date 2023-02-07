@@ -17,7 +17,7 @@ assets:
         mime: application/octet-stream
         usage: bootloader
         type: bootloader
-        template-type: simple
+        template-type: none
     ubuntu-install.ipxe:
         path: /ipxe_config_install
         mime: text/plain
@@ -33,13 +33,13 @@ assets:
         path: /vmlinuz
         mime: application/octet-stream
         type: other
-        template-type: simple
+        template-type: none
     initrd.gz:
         url: /.tftp/boot/images/Ubuntu-20.04/vmlinuz/initrd.gz
         path: /initrd.gz
         mime: application/octet-stream
         type: other
-        template-type: simple
+        template-type: none
     meta-data:
         path: /meta-data
         mime: text/plain
