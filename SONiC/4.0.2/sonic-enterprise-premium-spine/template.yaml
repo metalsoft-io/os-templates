@@ -6,6 +6,7 @@ os-template:
     network-os-switch-role: "spine"
     network-os-vendor: "dellemc"
     network-os-version: "4.0.2"
+    template-is-for-switch: true
     boot-type: legacy_only
     boot-methods-supported: local_drives
     initial-user: admin
