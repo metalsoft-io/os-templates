@@ -1,0 +1,6 @@
+[Match]
+Name=wan0
+
+[Network]
+Address={{wan_interface_0_ipv4_ip_0_cidr}}
+Gateway={{wan_interface_0_ipv4_ip_0_gateway}}
