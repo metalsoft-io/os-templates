@@ -1,0 +1,5 @@
+[Match]
+MACAddress={{wan_interface_0_mac_address}}
+
+[Link]
+Name=wan0

@@ -1,0 +1,22 @@
+deb http://deb.debian.org/debian bullseye main
+deb-src http://deb.debian.org/debian bullseye main
+
+deb http://deb.debian.org/debian-security/ bullseye-security main
+deb-src http://deb.debian.org/debian-security/ bullseye-security main
+
+deb http://deb.debian.org/debian bullseye-updates main
+deb-src http://deb.debian.org/debian bullseye-updates main
+
+# If you need the contrib and non-free components
+#deb http://deb.debian.org/debian bullseye main contrib non-free
+#deb-src http://deb.debian.org/debian bullseye main contrib non-free
+
+#deb http://deb.debian.org/debian-security/ bullseye-security main contrib non-free
+#deb-src http://deb.debian.org/debian-security/ bullseye-security main contrib non-free
+
+#deb http://deb.debian.org/debian bullseye-updates main contrib non-free
+#deb-src http://deb.debian.org/debian bullseye-updates main contrib non-free
+
+# If you need the Backports, contrib, and non-free components, uncomment below lines
+#deb http://deb.debian.org/debian bullseye-backports main contrib non-free
+#deb-src http://deb.debian.org/debian bullseye-backports main contrib non-free
