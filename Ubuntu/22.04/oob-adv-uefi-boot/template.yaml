@@ -1,6 +1,6 @@
 os-template:
     os-type: Ubuntu
-    os-version: 20.04
+    os-version: 22.04
     os-architecture: x86_64
     boot-type: uefi_only
     boot-methods-supported: local_drives
@@ -17,18 +17,12 @@ assets:
         usage: build_component
         type: bootloader-config
         template-type: simple
-    txt.cfg:
-        isopath: /isolinux/txt.cfg
-        mime: text/plain
-        usage: build_component
-        type: bootloader-config
-        template-type: simple
     user-data:
         isopath: /user-data
         mime: text/plain
         usage: build_component
         type: installer-config
-        template-type: simple
+        template-type: advanced
     meta-data:
         isopath: /meta-data
         mime: text/plain
@@ -41,3 +35,15 @@ assets:
         usage: build_component
         type: installer-config
         template-type: simple
+    iscsid.conf:
+        isopath: /iscsid.conf
+        mime: text/plain
+        usage: build_component
+        type: other
+        template-type: advanced
+    multipath.conf:
+        isopath: /multipath.conf
+        mime: text/plain
+        usage: build_component
+        type: other
+        template-type: advanced
