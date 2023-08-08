@@ -32,7 +32,8 @@ autoinstall:
         uri: "http://archive.ubuntu.com/ubuntu"
       - arches: [default]
         uri: "http://ports.ubuntu.com/ubuntu-ports"
-    geoip: true
+    fallback: offline-install
+    geoip: false
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#storage
   # a superset of that supported by curtin: https://curtin.readthedocs.io/en/latest/topics/storage.html
@@ -74,7 +75,7 @@ autoinstall:
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#packages
   packages:
-    - apt-transport-https
+    # - apt-transport-https
     - ca-certificates
     - curl
     - gnupg
@@ -83,7 +84,6 @@ autoinstall:
     - software-properties-common
     - open-iscsi
     - multipath-tools
-  #  - ntp
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#late-commands
   late-commands:
@@ -318,7 +318,7 @@ autoinstall:
     vlans:
       {%- for interface in interface_vlan %}
       {{ interface.interface_type }}{{ interface.vlan_id }}:
-        vlan_id: {{ interface.vlan_id }}
+        id: {{ interface.vlan_id }}
         link: {{ interface.link.type }}{{ interface.network_id }}{{ interface.link.id }}
         {%- if interface.mtu %}
         mtu: {{ interface.mtu }}
