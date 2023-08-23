@@ -58,6 +58,14 @@ autoinstall:
       {% endif -%}
       {% endif %}
 
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#identity
+  # optional in case the user-data section is present
+  # identity:
+  #   hostname: {{instance_subdomain_permanent}}
+  #   username: ubuntu
+  #   lock_passwd: false
+  #   password: "$6$rounds=4096$U3QtQs.SsIn2Q$JkcpdGBtSTULpz7T3nkDIERIfHPZhGDAfwDcfnf9UzBDiu5Bp7e/ENlIGlPhroUkBRNAMydDzjrIv5i4YH5So/"
+
   # https://ubuntu.com/server/docs/install/autoinstall-reference#ssh
   ssh:
     install-server: true
@@ -75,7 +83,7 @@ autoinstall:
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#packages
   packages:
-    # - apt-transport-https
+    - apt-transport-https
     - ca-certificates
     - curl
     - gnupg
@@ -319,7 +327,11 @@ autoinstall:
       {%- for interface in interface_vlan %}
       {{ interface.interface_type }}{{ interface.vlan_id }}:
         id: {{ interface.vlan_id }}
+        {%- if interface.link.type == 'physical' %}
+        link: {{ interface.network_type }}{{ interface.network_id }}{{ interface.link.id }}
+        {%- elseif interface.link.type == 'bond' %}
         link: {{ interface.link.type }}{{ interface.network_id }}{{ interface.link.id }}
+        {%- endif %}
         {%- if interface.mtu %}
         mtu: {{ interface.mtu }}
         {%- endif %}
