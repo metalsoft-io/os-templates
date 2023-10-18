@@ -32,7 +32,8 @@ autoinstall:
         uri: "http://archive.ubuntu.com/ubuntu"
       - arches: [default]
         uri: "http://ports.ubuntu.com/ubuntu-ports"
-    geoip: true
+    fallback: offline-install
+    geoip: false
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#storage
   # a superset of that supported by curtin: https://curtin.readthedocs.io/en/latest/topics/storage.html
@@ -67,8 +68,6 @@ autoinstall:
     - lsb-release
   #  - acpid
     - software-properties-common
-  #  - snmpd
-  #  - ntp
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#late-commands
   late-commands:
@@ -112,20 +111,7 @@ autoinstall:
       - ln -s ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
     # = Timezone =
     timezone: UTC
-    # = NTP =
-    # Override ntp with chrony configuration on Ubuntu
-    # ntp:
-    #   enabled: true
-    #   ntp_client: chrony  # Uses cloud-init default chrony configuration
-    # manage_resolv_conf: true
-    # resolv_conf:
-    #     nameservers: ['{{dns_server_ip_0}}', '{{dns_server_ip_1}}']
-    #     searchdomains:
-    #         - {{instance_subdomain_base}}
-    #     domain: {{instance_subdomain_base}}
-    #     options:
-    #         rotate: true
-    #         timeout: 1
+
     # = Set Hostname/Update Hostname =
     preserve_hostname: false
     prefer_fqdn_over_hostname: true

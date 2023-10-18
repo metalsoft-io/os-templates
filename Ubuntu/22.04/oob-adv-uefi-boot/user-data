@@ -1,0 +1,411 @@
+#cloud-config
+# https://ubuntu.com/server/docs/install/autoinstall
+autoinstall:
+  version: 1
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#early-commands
+  early-commands:
+    - echo "Early commnads ..."
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#locale
+  locale: en_US.utf8
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#refresh-installer
+  refresh-installer:
+    update: no
+    channel: "stable/ubuntu-$REL"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#keyboard
+  keyboard:
+    layout: "us"
+    variant: ""
+    toggle:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#proxy
+  # proxy:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#apt
+  # https://curtin.readthedocs.io/en/latest/topics/apt_source.html
+  apt:
+    preserve_sources_list: false
+    primary:
+      - arches: [i386, amd64]
+        uri: "http://archive.ubuntu.com/ubuntu"
+      - arches: [default]
+        uri: "http://ports.ubuntu.com/ubuntu-ports"
+    fallback: offline-install
+    geoip: false
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#storage
+  # a superset of that supported by curtin: https://curtin.readthedocs.io/en/latest/topics/storage.html
+  # The extensions to the curtin syntax are around disk selection and partition/logical volume sizing.
+  storage:
+    layout:
+      name: {{ storage_configuration.layout | default('lvm') }}
+      {% if storage_configuration.install_disk | length -%}
+      match:
+      {%- if storage_configuration.install_disk.size %}
+        size: {{ storage_configuration.install_disk.size -}}
+      {%- elif storage_configuration.install_disk.serial %}
+        serial: {{ storage_configuration.install_disk.serial -}}
+      {%- elif storage_configuration.install_disk.path %}
+        path: {{ storage_configuration.install_disk.path -}}
+      {%- elif storage_configuration.install_disk.id %}
+        serial: {% for disk in server.disks -%}
+                {% if disk.id == storage_configuration.install_disk.id -%}
+                {{ disk.serial_number -}}
+                {% endif -%}
+                {% endfor -%}
+      {% endif -%}
+      {% endif %}
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#identity
+  # optional in case the user-data section is present
+  # identity:
+  #   hostname: {{instance_subdomain_permanent}}
+  #   username: ubuntu
+  #   lock_passwd: false
+  #   password: "$6$rounds=4096$U3QtQs.SsIn2Q$JkcpdGBtSTULpz7T3nkDIERIfHPZhGDAfwDcfnf9UzBDiu5Bp7e/ENlIGlPhroUkBRNAMydDzjrIv5i4YH5So/"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#ssh
+  ssh:
+    install-server: true
+    {% if management_ssh_key -%}
+    authorized-keys:
+      - {{ management_ssh_key }}
+    {%- endif %}
+    allow-pw: true
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#snaps
+  # snaps:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#debconf-selections
+  # debconf-selections:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#packages
+  packages:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gnupg
+    - lsb-release
+  #  - acpid
+    - software-properties-common
+    - open-iscsi
+    - multipath-tools
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#late-commands
+  late-commands:
+    {% if iscsi.initiator_iqn -%}
+    - echo "InitiatorName={{ iscsi.initiator_iqn }}" > /target/etc/iscsi/initiatorname.iscsi
+    {%- endif %}
+    {%- if (drive_array and (drive_array | length)) or (shared_drive and (shared_drive | length)) %}
+    - cp /cdrom/iscsid.conf /target/etc/iscsi/iscsid.conf
+    - curtin in-target --target=/target -- systemctl enable open-iscsi
+    - curtin in-target --target=/target -- systemctl enable iscsid
+    {%- for interface in network_configuration.interfaces %}
+    {%- if interface.interface_type == 'physical' and interface.network_type == 'san' %}
+    - curtin in-target --target=/target -- iscsiadm -m iface -I san{{ interface.network_id }}{{ interface.type_interface_id }} --op=new
+    {%- endif %}
+    {%- endfor %}
+    {%- set multipath_enabled = false %}
+    {%- if drive_array and (drive_array | length) %}
+    {%- for drive in drive_array %}
+    {%- if drive.multipath %}
+    {%- set multipath_enabled = true %}
+    {%- endif %}
+    {%- if drive.targets and (drive.targets | length) %}
+    {%- for target in drive.targets %}
+    {%- if target.portals and (target.portals | length) %}
+    {%- for portal in target.portals %}
+    {%- if portal.ip_type == 'ipv6'  %}
+    - curtin in-target --target=/target -- iscsiadm -m discovery --type sendtargets --portal [{{ portal.ip }}]:{{ portal.port }}
+    - curtin in-target --target=/target -- iscsiadm -m node --op=update -n node.conn[0].startup -v automatic
+    - curtin in-target --target=/target -- iscsiadm -m node --op=update -n node.startup -v automatic
+    - curtin in-target --target=/target -- iscsiadm --mode node --targetname {{ target.name }} --portal [{{ portal.ip }}]:{{ portal.port }} --login
+    {%- else %}
+    - curtin in-target --target=/target -- iscsiadm -m discovery --type sendtargets --portal {{ portal.ip }}:{{ portal.port }}
+    - curtin in-target --target=/target -- iscsiadm -m node --op=update -n node.conn[0].startup -v automatic
+    - curtin in-target --target=/target -- iscsiadm -m node --op=update -n node.startup -v automatic
+    - curtin in-target --target=/target -- iscsiadm --mode node --targetname {{ target.name }} --portal {{ portal.ip }}:{{ portal.port }} --login
+    {%- endif %}
+    {%- endfor %}
+    {%- endif %}
+    {%- endfor %}
+    {%- endif %}
+    {%- endfor %}
+    {%- endif %}
+    {%- if shared_drive and (shared_drive | length) %}
+    {%- for drive in shared_drive %}
+    {%- if drive.multipath %}
+    {%- set multipath_enabled = true %}
+    {%- endif %}
+    {%- if drive.targets and (drive.targets | length) %}
+    {%- for target in drive.targets %}
+    {%- if target.portals and (target.portals | length) %}
+    {%- for portal in target.portals %}
+    {%- if portal.ip_type == 'ipv6'  %}
+    - curtin in-target --target=/target -- iscsiadm -m discovery --type sendtargets --portal [{{ portal.ip }}]:{{ portal.port }}
+    - curtin in-target --target=/target -- iscsiadm -m node --op=update -n node.conn[0].startup -v automatic
+    - curtin in-target --target=/target -- iscsiadm -m node --op=update -n node.startup -v automatic
+    - curtin in-target --target=/target -- iscsiadm --mode node --targetname {{ target.name }} --portal [{{ portal.ip }}]:{{ portal.port }} --login
+    {%- else %}
+    - curtin in-target --target=/target -- iscsiadm -m discovery --type sendtargets --portal {{ portal.ip }}:{{ portal.port }}
+    - curtin in-target --target=/target -- iscsiadm -m node --op=update -n node.conn[0].startup -v automatic
+    - curtin in-target --target=/target -- iscsiadm -m node --op=update -n node.startup -v automatic
+    - curtin in-target --target=/target -- iscsiadm --mode node --targetname {{ target.name }} --portal {{ portal.ip }}:{{ portal.port }} --login
+    {%- endif %}
+    {%- endfor %}
+    {%- endif %}
+    {%- endfor %}
+    {%- endif %}
+    {%- endfor %}
+    {%- endif %}
+    {%- if multipath_enabled %}
+    - cp /cdrom/multipath.conf /target/etc/multipath.conf
+    - curtin in-target --target=/target -- systemctl enable multipath-tools 2>/dev/null || true
+    {%- endif %}
+    {%- endif %}
+    - echo "Done"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#error-commands
+  # Shell commands to run after the install has failed.
+  # error-commands:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#reporting
+  reporting:
+    builtin:
+      type: print
+
+{% if network_configuration and server.network_interfaces %}
+  network:
+    version: 2
+    renderer: networkd
+    {%- set interface_physical = [] %}
+    {%- set interface_bond = [] %}
+    {%- set interface_vlan = [] %}
+    {%- for interface in network_configuration.interfaces %}
+      {%- if interface.interface_type == 'physical' %}
+        {%- set interface_physical = (interface_physical.push(interface), interface_physical) %}
+      {%- elseif interface.interface_type == 'bond' %}
+        {%- set interface_bond = (interface_bond.push(interface), interface_bond) %}
+      {%- elseif interface.interface_type == 'vlan' %}
+        {%- set interface_vlan = (interface_vlan.push(interface), interface_vlan) %}
+      {%- endif %}
+    {%- endfor %}
+    {%- if interface_physical | length %}
+    ethernets:
+      {%- for interface in interface_physical %}
+      {{ interface.network_type }}{{ interface.network_id }}{{ interface.type_interface_id }}:
+        {%- if interface.dhcp4 %}
+        dhcp4: {{ interface.dhcp4 }}
+        {%- endif %}
+        {%- if interface.dhcp6 %}
+        dhcp6: {{ interface.dhcp6 }}
+        {%- endif %}
+        {%- if interface.optional %}
+        optional: {{ interface.optional }}
+        {%- endif %}
+        {%- if interface.critical %}
+        critical: {{ interface.critical }}
+        {%- endif %}
+        {%- if interface.mtu %}
+        mtu: {{ interface.mtu }}
+        {% endif -%}
+        {%- if (interface.ipv4_addresses | length) or (interface.ipv6_addresses | length) %}
+        addresses:
+        {%- for ipv4_address in interface.ipv4_addresses %}
+        - {{ ipv4_address.cidr }}
+        {% endfor -%}
+        {%- for ipv6_address in interface.ipv6_addresses %}
+        - {{ ipv6_address.cidr }}
+        {% endfor -%}
+        {% endif %}
+        match:
+          macaddress: {% for network_interface in server.network_interfaces -%}
+                      {%- if network_interface.interface_index == interface.interface_index %}
+                      {{- network_interface.mac_address }}
+                      {%- endif %}
+                      {%- endfor %}
+        set-name: {{ interface.network_type }}{{ interface.network_id }}{{ interface.type_interface_id }}
+        {%- if interface.routes | length %}
+        routes:
+        {%- for route in interface.routes %}
+        - to: {{ route.to }}
+          via: {{ route.via }}
+          {%- if route.metric %}
+          metric: {{ route.metric }}
+          {% endif -%}
+          {%- if route.on_link %}
+          on-link: {{ route.on_link }}
+          {%- endif %}
+          {%- if route.table %}
+          table: {{ route.table }}
+          {% endif -%}
+        {% endfor -%}
+        {% endif -%}
+        {%- if interface.dns_nameservers.addresses | length %}
+        nameservers:
+          addresses:
+          {% for addr in interface.dns_nameservers.addresses -%}
+          - {{ addr }}
+          {% endfor -%}
+          {%- if interface.dns_nameservers.search_domains | length %}
+          search:
+          {% for domain in interface.dns_nameservers.search_domains -%}
+          - {{ domain }}
+          {% endfor -%}
+          {% endif -%}
+        {% endif -%}
+      {% endfor -%}
+    {% endif -%}
+    {%- if interface_bond | length %}
+    bonds:
+      {%- for interface in interface_bond %}
+      {{ interface.interface_type }}{{ interface.network_id }}{{ interface.type_interface_id }}:
+        interfaces:
+        {%- for member in interface.members %}
+        - {{ interface.network_type }}{{ interface.network_id }}{{ member.id }}
+        {%- endfor %}
+        parameters:
+          mode: {{ interface.parameters.mode }}
+          {%- if (interface.parameters.lacp_rate and interface.parameters.mode == '802.3ad') %}
+          lacp-rate: {{ interface.parameters.lacp_rate }}
+          {%- endif %}
+          {%- if interface.parameters.transmit_hash_policy and (interface.parameters.mode == '802.3ad') or (interface.parameters.mode == 'balance-xor') or (interface.parameters.mode == 'balance-tlb') %}
+          transmit-hash-policy: {{ interface.parameters.transmit_hash_policy }}
+          {%- endif %}
+          {%- if interface.parameters.mii_monitor_interval %}
+          mii-monitor-interval: {{ interface.parameters.mii_monitor_interval }}
+          {%- endif %}
+        {%- if interface.mtu %}
+        mtu: {{ interface.mtu }}
+        {%- endif %}
+        {%- if (interface.ipv4_addresses | length) or (interface.ipv6_addresses | length) %}
+        addresses:
+        {%- for ipv4_address in interface.ipv4_addresses %}
+        - {{ ipv4_address.cidr }}
+        {%- endfor %}
+        {%- for ipv6_address in interface.ipv6_addresses %}
+        - {{ ipv6_address.cidr }}
+        {%- endfor %}
+        {%- elseif interface.dhcp4 == true %}
+        dhcp4: true
+        {%- endif %}
+        {%- if interface.dns_nameservers.addresses %}
+        nameservers:
+          addresses:
+          {%- for addr in interface.dns_nameservers.addresses %}
+          - {{ addr }}
+          {%- endfor -%}
+          {%- if interface.dns_nameservers.search_domains %}
+          search:
+          {%- for domain in interface.dns_nameservers.search_domains %}
+          - {{ domain }}
+          {%- endfor %}
+          {%- endif %}
+        {%- endif %}
+        {%- if interface.routes | length %}
+        routes:
+        {%- for route in interface.routes %}
+        - to: {{ route.to }}
+          via: {{ route.via }}
+          {%- if route.metric %}
+          metric: {{ route.metric }}
+          {%- endif %}
+          {%- if route.on_link %}
+          on-link: {{ route.on_link }}
+          {%- endif %}
+          {%- if route.table %}
+          table: {{ route.table }}
+          {%- endif %}
+        {%- endfor %}
+        {%- endif %}
+      {%- endfor %}
+      {%- endif %}
+    {%- if interface_vlan | length %}
+    vlans:
+      {%- for interface in interface_vlan %}
+      {{ interface.interface_type }}{{ interface.vlan_id }}:
+        id: {{ interface.vlan_id }}
+        {%- if interface.link.type == 'physical' %}
+        link: {{ interface.network_type }}{{ interface.network_id }}{{ interface.link.id }}
+        {%- elseif interface.link.type == 'bond' %}
+        link: {{ interface.link.type }}{{ interface.network_id }}{{ interface.link.id }}
+        {%- endif %}
+        {%- if interface.mtu %}
+        mtu: {{ interface.mtu }}
+        {%- endif %}
+        {%- if (interface.ipv4_addresses | length) or (interface.ipv6_addresses | length) %}
+        addresses:
+        {%- for ipv4_address in interface.ipv4_addresses %}
+        - {{ ipv4_address.cidr }}
+        {%- endfor %}
+        {%- for ipv6_address in interface.ipv6_addresses %}
+        - {{ ipv6_address.cidr }}
+        {%- endfor %}
+        {%- elseif interface.dhcp4 == true %}
+        dhcp4: true
+        {%- endif %}
+        {%- if interface.dns_nameservers.addresses %}
+        nameservers:
+          addresses:
+          {%- for addr in interface.dns_nameservers.addresses %}
+          - {{ addr }}
+          {%- endfor -%}
+          {%- if interface.dns_nameservers.search_domains %}
+          search:
+          {%- for domain in interface.dns_nameservers.search_domains %}
+          - {{ domain }}
+          {%- endfor %}
+          {%- endif %}
+        {%- endif %}
+      {%- endfor %}
+    {%- endif %}
+{%- endif %}
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#user-data
+  user-data:
+    # = Runcmd =
+    # Run commands on first boot
+    runcmd:
+      - rm -f /etc/resolv.conf
+      - ln -s ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+    # = Timezone =
+    timezone: UTC
+    # = Set Hostname/Update Hostname =
+    preserve_hostname: false
+    prefer_fqdn_over_hostname: true
+    fqdn: {{instance_subdomain_permanent}}
+    hostname: {{instance_subdomain_permanent}}
+    # = Set Passwords =
+    ssh_pwauth: true
+    password: {{initial_password}}
+    chpasswd: { expire: false }
+    # = Users and Groups =
+    users:
+      - default
+      - name: root
+        lock_passwd: false
+    # = Growpart =
+    growpart:
+      mode: auto
+      devices: ['/']
+      ignore_growroot_disabled: false
+    # = SSH =
+    ssh_deletekeys: true
+    ssh_genkeytypes: [rsa, ecdsa, ed25519]
+    disable_root: false
+    allow_public_ssh_keys: true
+    # SSH Authkey Fingerprints
+    no_ssh_fingerprints: true
+    authkey_hash: sha256
+    # = Keys to Console =
+    ssh:
+      emit_keys_to_console: true
+    # = Package Update Upgrade Install =
+    package_update: false
+    package_upgrade: false
+    package_reboot_if_required: false
+    # = Final Message =
+    final_message: Cloud-init Done!
+  shutdown: "poweroff"
