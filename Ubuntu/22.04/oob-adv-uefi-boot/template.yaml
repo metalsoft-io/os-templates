@@ -47,3 +47,15 @@ assets:
         usage: build_component
         type: other
         template-type: advanced
+    iscsi-connect.sh:
+        isopath: /iscsi-connect.sh
+        mime: text/plain
+        usage: build_component
+        type: other
+        template-type: advanced
+    rc.local:
+        isopath: /rc.local
+        mime: text/plain
+        usage: build_component
+        type: other
+        template-type: advanced

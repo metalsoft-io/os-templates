@@ -1,0 +1,5 @@
+#!/bin/sh
+
+/opt/iscsi-connect.sh
+
+exit 0
