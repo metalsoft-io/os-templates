@@ -71,9 +71,16 @@ autoinstall:
   # https://ubuntu.com/server/docs/install/autoinstall-reference#ssh
   ssh:
     install-server: true
-    {% if management_ssh_key -%}
+    {% if management_ssh_key or (user_ssh_key and (user_ssh_key | length)) -%}
     authorized-keys:
+    {%- if user_ssh_key and (user_ssh_key | length) %}
+    {%- for key in user_ssh_key %}
+      - {{ key }}
+    {%- endfor %}
+    {%- endif %}
+    {%- if management_ssh_key %}
       - {{ management_ssh_key }}
+    {%- endif %}
     {%- endif %}
     allow-pw: true
 
