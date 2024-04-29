@@ -1,0 +1,1 @@
+Patch file is applied to the file named BOOT.CFG in the given ISO. If not found, it will throw error.
