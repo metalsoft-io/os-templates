@@ -23,6 +23,18 @@ assets:
         usage: build_component
         type: installer-config
         template-type: advanced
+    meta-data-ubuntu-24-04:
+        isopath: /meta-data
+        mime: text/plain
+        usage: build_component
+        type: installer-config
+        template-type: simple
+    vendor-data-ubuntu-24-04:
+        isopath: /vendor-data
+        mime: text/plain
+        usage: build_component
+        type: installer-config
+        template-type: simple
     iscsid.conf-ubuntu-24-04:
         isopath: /iscsid.conf
         mime: text/plain
