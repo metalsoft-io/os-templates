@@ -21,8 +21,8 @@ autoinstall:
     toggle:
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#source
-  source:
-    id: "ubuntu-server-minimal"
+  #source:
+  #  id: "ubuntu-server-minimal"
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#proxy
   # proxy:   
@@ -30,15 +30,17 @@ autoinstall:
   # https://curtin.readthedocs.io/en/latest/topics/apt_source.html
   apt:
     preserve_sources_list: false
-    mirror-selection:
-      primary:
-        - country-mirror
-        - arches: [i386, amd64]
-          uri: "http://archive.ubuntu.com/ubuntu"
-        - arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
-          uri: "http://ports.ubuntu.com/ubuntu-ports"
+#    don't configure mirrors during the install in case of air-gapped env. It will take long time to time out.
+#    mirror-selection:
+#      primary:
+#        - country-mirror
+#        - arches: [i386, amd64]
+#          uri: "http://archive.ubuntu.com/ubuntu"
+#        - arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
+#          uri: "http://ports.ubuntu.com/ubuntu-ports"
+    primary: []
     fallback: offline-install
-    geoip: true
+    geoip: false
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#storage
   # a superset of that supported by curtin: https://curtin.readthedocs.io/en/latest/topics/storage.html
@@ -109,7 +111,7 @@ autoinstall:
     - software-properties-common
     - open-iscsi
     - multipath-tools
-    - acpid
+#    - acpid
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#late-commands
   late-commands:
@@ -143,6 +145,7 @@ autoinstall:
     - curtin in-target --target=/target -- systemctl enable multipath-tools 2>/dev/null || true
     {%- endif %}
     {%- endif %}
+    - cp /cdrom/ubuntu.sources /target/etc/apt/sources.list.d/
     - echo "Done"
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#error-commands
@@ -201,7 +204,7 @@ autoinstall:
         match:
           macaddress: {% for network_interface in server.network_interfaces -%}
                       {%- if network_interface.interface_index == interface.interface_index %}
-                      {{- network_interface.mac_address }}
+                      {{- network_interface.mac_address | lower }}
                       {%- endif %}
                       {%- endfor %}
         set-name: {{ interface.network_type }}{{ interface.network_id }}{{ interface.type_interface_id }}
