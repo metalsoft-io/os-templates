@@ -59,4 +59,11 @@ assets:
         usage: build_component
         type: other
         template-type: advanced
+    ubuntu.sources-ubuntu-24-04:
+        isopath: /ubuntu.sources
+        mime: text/plain
+        usage: build_component
+        type: other
+        template-type: advanced
+
 
