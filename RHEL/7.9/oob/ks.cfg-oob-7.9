@@ -1,0 +1,242 @@
+####version=RHEL9
+ignoredisk --only-use=sda
+# System bootloader configuration
+bootloader --append=" crashkernel=auto" --location=mbr --boot-drive=sda
+autopart --type=lvm
+# Partition clearing information
+clearpart --all --initlabel --drives=sda
+# Use text mode install
+text
+# Keyboard layouts
+keyboard --vckeymap=us --xlayouts='us'
+# System language
+lang en_US.UTF-8
+
+# Network information.  Note IPV6 assignments aren't supported currently.
+# Note Multiple ip addresses can not be assigned to a single device using the network command. secondary ips need to be added in %post
+# If two network lines use the same device, the second network will overwrite the first.
+
+{%- set interface_physical = [] %}
+{%- set interface_bond = [] %}
+{%- set interface_vlan = [] %}
+
+{%- for interface in network_configuration.interfaces %}
+  {%- if interface.interface_type == 'physical' %}
+    {%- set interface_physical = (interface_physical.push(interface), interface_physical) %}
+  {%- elif interface.interface_type == 'bond' %}
+    {%- set interface_bond = (interface_bond.push(interface), interface_bond) %}
+  {%- elif interface.interface_type == 'vlan' %}
+    {%- set interface_vlan = (interface_vlan.push(interface), interface_vlan) %}
+  {%- endif %}
+{%- endfor %}
+
+{# Find the first interface with DNS nameservers #}
+{%- set dns_servers = [] %}
+{%- set dns_found = False %}
+
+{# Check physical interfaces #}
+{%- for interface in interface_physical %}
+  {%- if not dns_found and interface.dns_nameservers and interface.dns_nameservers.addresses %}
+    {%- set dns_servers = interface.dns_nameservers.addresses %}
+    {%- set dns_found = True %}
+  {%- endif %}
+{%- endfor %}
+
+{# If not found, check bond interfaces #}
+{%- if not dns_found %}
+  {%- for interface in interface_bond %}
+    {%- if not dns_found and interface.dns_nameservers and interface.dns_nameservers.addresses %}
+      {%- set dns_servers = interface.dns_nameservers.addresses %}
+      {%- set dns_found = True %}
+    {%- endif %}
+  {%- endfor %}
+{%- endif %}
+
+{# If still not found, check VLAN interfaces #}
+{%- if not dns_found %}
+  {%- for interface in interface_vlan %}
+    {%- if not dns_found and interface.dns_nameservers and interface.dns_nameservers.addresses %}
+      {%- set dns_servers = interface.dns_nameservers.addresses %}
+      {%- set dns_found = True %}
+    {%- endif %}
+  {%- endfor %}
+{%- endif %}
+
+{%- set dns_servers_str = dns_servers | join(',') %}
+
+{# Set the hostname on a separate network command line #}
+network --hostname={{ instance_subdomain_permanent }}
+
+{# Macro to construct interface names #}
+{%- macro construct_interface_name(interface) -%}
+  {%- if interface.interface_type == 'physical' -%}
+    {{ interface.network_type }}{{ interface.network_id }}{{ interface.type_interface_id }}
+  {%- elif interface.interface_type == 'bond' -%}
+    {{ interface.interface_type }}{{ interface.network_id }}{{ interface.type_interface_id }}
+  {%- elif interface.interface_type == 'vlan' -%}
+    {{ interface.interface_type }}{{ interface.network_id }}{{ interface.type_interface_id }}
+  {%- else -%}
+    {{ interface.type_interface_id }}
+  {%- endif %}
+{%- endmacro -%}
+
+{# Configure physical interfaces #}
+{%- if interface_physical | length %}
+  {%- for interface in interface_physical %}
+    {%- if interface.ipv4_addresses | length and (interface_vlan | length == 0) %}
+      {%- set ipv4_address = interface.ipv4_addresses[0] %}
+      network --bootproto=static --onboot=yes --device={{ interface.mac_address | lower }} --ip={{ ipv4_address.ip }} --netmask={{ ipv4_address.netmask }} --gateway={{ ipv4_address.gateway }} --mtu={{ interface.mtu }} --nameserver={{ dns_servers_str }} --ipv6=auto --activate 
+    {%- else %}
+      network --device={{ interface.mac_address | lower }} --onboot=yes --mtu={{ interface.mtu }} --noipv4 --noipv6
+    {%- endif %}
+  {%- endfor %}
+{%- endif %}
+
+{# Configure bond interfaces #}
+{%- if interface_bond | length %}
+  {%- for interface in interface_bond %}
+    {% set bond_name = construct_interface_name(interface) %}
+    {% set bond_members = [] -%}
+
+    {%- for member in interface.members %}
+      {%- set member_interface_found = False %}
+      {%- for iface in interface_physical %}
+        {%- if member_interface_found == False and iface.type_interface_id == member.id %}
+          {%- set member_interface_found = True %}
+          {% set member_mac = iface.mac_address | lower %}
+          {% set device_name = construct_interface_name(iface) %}
+         
+          {%- set bond_members = (bond_members.push(device_name), bond_members) %}
+        {%- endif %}
+      {%- endfor %}
+    {%- endfor %}
+
+    {% set bondslaves = bond_members | join(',') %}
+    {%- if interface.ipv4_addresses | length and (interface_vlan | length == 0) %}
+      {%- set ipv4_address = interface.ipv4_addresses[0] %}
+      network --device={{ bond_name }} --onboot=yes --nameserver={{ dns_servers_str }} --bootproto=static --ip={{ ipv4_address.ip }} --netmask={{ ipv4_address.netmask }} --gateway={{ ipv4_address.gateway }} --bondslaves={{ bondslaves }} --bondopts=mode={{ interface.parameters.mode }}{% if interface.parameters.mii_monitor_interval %},miimon={{ interface.parameters.mii_monitor_interval }}{% endif %}{% if interface.parameters.lacp_rate %},lacp_rate={{ interface.parameters.lacp_rate }}{% endif %}{% if interface.parameters.transmit_hash_policy %},xmit_hash_policy={{ interface.parameters.transmit_hash_policy }}{% endif %} --mtu={{ interface.mtu }}
+    {%- else %}
+      network --device={{ bond_name }} --onboot=yes --bondslaves={{ bondslaves }} --noipv4 -noipv6 --bondopts=mode={{ interface.parameters.mode }}{% if interface.parameters.mii_monitor_interval %},miimon={{ interface.parameters.mii_monitor_interval }}{% endif %}{% if interface.parameters.lacp_rate %},lacp_rate={{ interface.parameters.lacp_rate }}{% endif %}{% if interface.parameters.transmit_hash_policy %},xmit_hash_policy={{ interface.parameters.transmit_hash_policy }}{% endif %} --mtu={{ interface.mtu }}
+    {%- endif %}
+  {%- endfor %}
+{%- endif %}
+
+
+{# Configure VLAN interfaces #}
+{%- if interface_vlan | length %}
+  {%- for interface in interface_vlan %}
+    {%- set parent_interface_found = False %}
+    {%- for iface in network_configuration.interfaces %}
+      {%- if parent_interface_found == False and iface.interface_type == interface.link.type and iface.type_interface_id == interface.link.id %}
+        {% set parent_name = construct_interface_name(iface) %}
+        {%- set parent_interface_found = True %}
+        {%- set parent_mtu = iface.mtu %}
+        {%- set ipv4_address = interface.ipv4_addresses[0] %}
+        network --bootproto=static --ip={{ ipv4_address.ip }} --nameserver={{ dns_servers_str }} --netmask={{ ipv4_address.netmask }} --gateway={{ ipv4_address.gateway }} --vlanid={{ interface.vlan_id }} --interfacename=vlan{{ interface.vlan_id }} --device={{ parent_name }} --mtu={{ parent_mtu }} --onboot=yes
+      {%- endif %}
+    {%- endfor %}
+  {%- endfor %}
+{%- endif %}
+
+%post --interpreter /bin/bash --erroronfail --log=/root/ks.log 
+
+# Generate udev rules for interface renaming
+cat <<EOL > /etc/udev/rules.d/70-persistent-net.rules
+{%- for interface in interface_physical %}
+SUBSYSTEM=="net", ACTION=="add", ATTR{address}=="{{ interface.mac_address | lower }}", NAME="{{ construct_interface_name(interface) }}"
+{%- endfor %}
+EOL
+
+# Change old name to new interface name in networkmanager device names
+{%- for interface in interface_physical %}
+OLD_INTERFACE_NAME=$(nmcli device show | grep -B 2 -i {{ interface.mac_address }} | grep DEVICE | awk '{print $2}')
+sed -i "s/$OLD_INTERFACE_NAME/{{ construct_interface_name(interface) }}/g" /etc/NetworkManager/system-connections/${OLD_INTERFACE_NAME}.nmconnection
+{%- endfor %}
+
+# Need to add this to make the network start up properly after Reboot after interface renaming
+{%- for interface in interface_bond %}
+
+# Get the bond name from the argument
+BOND_NAME="{{ construct_interface_name(interface) }}"
+
+# Directory where the NetworkManager connection files are stored
+CONFIG_DIR="/etc/NetworkManager/system-connections/"
+
+# The file to modify based on bond_name
+FILE="${CONFIG_DIR}/${BOND_NAME}.nmconnection"
+
+# Line to insert
+LINE_TO_INSERT="autoconnect-slaves=1"
+
+# Insert the line after the [connection] section
+awk -v LINE="$LINE_TO_INSERT" '/\[connection\]/ { print; print LINE; next }1' "$FILE" > "${FILE}.tmp" && mv "${FILE}.tmp" "$FILE"
+
+chmod 600 "$FILE"
+
+{%- endfor %}
+
+# Add ssh keys to initial user(usually root)
+{% if initial_username %}
+  {% set homedir = "/home/" + initial_username %}
+{% else %}
+    {% set initial_username = "root" %}
+    {% set homedir = "/root" %}
+{% endif %}
+
+# Create the .ssh directory for the user if it doesn't exist
+mkdir -p {{ homedir }}/.ssh
+chmod 700 {{ homedir }}/.ssh
+
+# Add the management SSH key
+echo "{{ management_ssh_key }}" >> {{ homedir }}/.ssh/authorized_keys
+
+# Add additional user SSH keys from the array
+{% for key in user_ssh_key %}
+echo "{{ key }}" >> {{ homedir }}/.ssh/authorized_keys
+{%- endfor %}
+
+# Set correct permissions
+chmod 600 {{ homedir }}/.ssh/authorized_keys
+chown {{ initial_username }}:{{ initial_username }} {{ homedir }}/.ssh/authorized_keys
+
+%end
+
+# user password
+{%- if initial_username and initial_username != "root" %}
+  user --name={{ initial_username }} --password={{ initial_password}} --plaintext
+{%- endif %}
+
+# root password
+rootpw --plaintext {{initial_password}}
+# SELinux configuration
+selinux --disabled
+# Run the Setup Agent on first boot
+firstboot --enable
+# Do not configure the X Window System
+skipx
+# System services
+services --enabled="chronyd"
+# System timezone
+timezone UTC --utc
+timesource --ntp-server pool.ntp.org
+
+# Reboot the system after installation
+shutdown
+
+%packages
+@^minimal-environment
+@standard
+kexec-tools
+
+%end
+
+%addon com_redhat_kdump --enable --reserve-mb='auto'
+
+%end
+
+%anaconda
+pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+pwpolicy user --minlen=6 --minquality=1 --notstrict --nochanges --emptyok
+pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+%end
+
