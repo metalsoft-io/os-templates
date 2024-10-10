@@ -1,4 +1,4 @@
-####version=RHEL9
+####version=RHEL7
 ignoredisk --only-use=sda
 # System bootloader configuration
 bootloader --append=" crashkernel=auto" --location=mbr --boot-drive=sda
@@ -150,7 +150,7 @@ EOL
 # Change old name to new interface name in networkmanager device names
 {%- for interface in interface_physical %}
 OLD_INTERFACE_NAME=$(nmcli device show | grep -B 2 -i {{ interface.mac_address }} | grep DEVICE | awk '{print $2}')
-sed -i "s/$OLD_INTERFACE_NAME/{{ construct_interface_name(interface) }}/g" /etc/NetworkManager/system-connections/${OLD_INTERFACE_NAME}.nmconnection
+sed -i "s/$OLD_INTERFACE_NAME/{{ construct_interface_name(interface) }}/g" /etc/sysconfig/network-scripts/ifcfg-${OLD_INTERFACE_NAME}
 {%- endfor %}
 
 # Need to add this to make the network start up properly after Reboot after interface renaming
@@ -160,16 +160,16 @@ sed -i "s/$OLD_INTERFACE_NAME/{{ construct_interface_name(interface) }}/g" /etc/
 BOND_NAME="{{ construct_interface_name(interface) }}"
 
 # Directory where the NetworkManager connection files are stored
-CONFIG_DIR="/etc/NetworkManager/system-connections/"
+CONFIG_DIR="/etc/sysconfig/network-scripts/"
 
 # The file to modify based on bond_name
-FILE="${CONFIG_DIR}/${BOND_NAME}.nmconnection"
+FILE="${CONFIG_DIR}/ifcfg-${BOND_NAME}"
 
 # Line to insert
 LINE_TO_INSERT="autoconnect-slaves=1"
 
 # Insert the line after the [connection] section
-awk -v LINE="$LINE_TO_INSERT" '/\[connection\]/ { print; print LINE; next }1' "$FILE" > "${FILE}.tmp" && mv "${FILE}.tmp" "$FILE"
+awk -v LINE="$LINE_TO_INSERT" 'NR==1 {print LINE} {print}' "$FILE" > "${FILE}.tmp" && mv "${FILE}.tmp" "$FILE"
 
 chmod 600 "$FILE"
 
@@ -217,15 +217,12 @@ skipx
 # System services
 services --enabled="chronyd"
 # System timezone
-timezone UTC --utc
-timesource --ntp-server pool.ntp.org
+timezone UTC --isUtc --ntpservers=pool.ntp.org
 
 # Reboot the system after installation
 shutdown
 
 %packages
-@^minimal-environment
-@standard
 kexec-tools
 
 %end
@@ -239,4 +236,5 @@ pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
 pwpolicy user --minlen=6 --minquality=1 --notstrict --nochanges --emptyok
 pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
 %end
+
 
