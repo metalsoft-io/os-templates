@@ -136,13 +136,13 @@
       <resolv_conf_policy>auto</resolv_conf_policy>
     </dns>
     <net-udev config:type="list">
-      <rule>
-        {%- for interface in interface_physical %}
-          <name>{{construct_interface_name(interface)}}</name>
-          <rule>ATTR{address}</rule>
-          <value>{{interface.mac_address | lower}}</value>
-        {%- endfor %}
-      </rule>
+      {%- for interface in interface_physical %}
+        <rule>
+        <name>{{construct_interface_name(interface)}}</name>
+        <rule>ATTR{address}</rule>
+        <value>{{interface.mac_address | lower}}</value>
+        </rule>
+      {%- endfor %}
     </net-udev>
 
     <interfaces config:type="list">
