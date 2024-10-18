@@ -1,25 +1,320 @@
-<profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
-<users config:type="list">
-<user>
-<encrypted config:type="boolean">false</encrypted>
-<user_password>linux</user_password>
-<username>root</username>
-</user>
-</users>
-<add-on>
-<add_on_products config:type="list">
-<listentry>
-<media_url>
-<![CDATA[ relurl:// ]]>
-</media_url>
-<product>sle-module-basesystem</product>
-<product_dir>/Module-Basesystem</product_dir>
-</listentry>
-</add_on_products>
-</add-on>
-<software>
-<products config:type="list">
-<product>SLES</product>
-</products>
-</software>
+<?xml version="1.0"?>
+<!DOCTYPE profile>
+<profile xmlns="http://www.suse.com/1.0/yast2ns"
+         xmlns:config="http://www.suse.com/1.0/configns">
+
+  <!-- Add-ons for installation media and products -->
+  <add-on>
+    <add_on_products config:type="list">
+      <listentry>
+        <media_url><![CDATA[ relurl:// ]]></media_url>
+        <product>sle-module-basesystem</product>
+        <product_dir>/Module-Basesystem</product_dir>
+      </listentry>
+    </add_on_products>
+  </add-on>
+
+  <!-- General Installation Mode -->
+  <general>
+    <mode>
+      <confirm config:type="boolean">false</confirm> <!-- No confirmation prompts -->
+      <final_halt config:type="boolean">true</final_halt>
+    </mode>
+  </general>
+
+  <!-- Keyboard Configuration -->
+  <keyboard>
+    <keymap>us</keymap> <!-- Configure keymap to 'us' for U.S. layout -->
+  </keyboard>
+
+  <!-- Language Settings -->
+  <language>
+    <language>en_US</language>
+  </language>
+
+  <!-- Timezone Configuration -->
+  <timezone>
+    <timezone>Etc/GMT</timezone>
+  </timezone>
+
+  <!-- Partitioning Scheme -->
+  <storage>
+    <proposal>
+      <lvm config:type="boolean">true</lvm>
+    </proposal>
+  </storage>
+
+  <!-- Software Selection -->
+  <software>
+    <install_recommended t="boolean">true</install_recommended>
+    <packages t="list">
+      <package>iputils</package>
+    </packages>
+    <products config:type="list">
+      <product>SLES</product>
+    </products>
+  </software>
+
+  <!-- Networking Configuration -->
+  <networking>
+
+    {%- set interface_physical = [] %}
+    {%- set interface_bond = [] %}
+    {%- set interface_vlan = [] %}
+
+    {%- for interface in network_configuration.interfaces %}
+      {%- if interface.interface_type == 'physical' %}
+        {%- set interface_physical = (interface_physical.push(interface), interface_physical) %}
+      {%- elif interface.interface_type == 'bond' %}
+        {%- set interface_bond = (interface_bond.push(interface), interface_bond) %}
+      {%- elif interface.interface_type == 'vlan' %}
+        {%- set interface_vlan = (interface_vlan.push(interface), interface_vlan) %}
+      {%- endif %}
+    {%- endfor %}
+
+    {# Find the first interface with DNS nameservers #}
+    {%- set dns_servers = [] %}
+    {%- set dns_found = False %}
+
+    {# Check physical interfaces #}
+    {%- for interface in interface_physical %}
+      {%- if not dns_found and interface.dns_nameservers and interface.dns_nameservers.addresses %}
+        {%- set dns_servers = interface.dns_nameservers.addresses %}
+        {%- set dns_found = True %}
+      {%- endif %}
+    {%- endfor %}
+
+    {# If not found, check bond interfaces #}
+    {%- if not dns_found %}
+      {%- for interface in interface_bond %}
+        {%- if not dns_found and interface.dns_nameservers and interface.dns_nameservers.addresses %}
+          {%- set dns_servers = interface.dns_nameservers.addresses %}
+          {%- set dns_found = True %}
+        {%- endif %}
+      {%- endfor %}
+    {%- endif %}
+
+    {# If still not found, check VLAN interfaces #}
+    {%- if not dns_found %}
+      {%- for interface in interface_vlan %}
+        {%- if not dns_found and interface.dns_nameservers and interface.dns_nameservers.addresses %}
+          {%- set dns_servers = interface.dns_nameservers.addresses %}
+          {%- set dns_found = True %}
+        {%- endif %}
+      {%- endfor %}
+    {%- endif %}
+
+    {%- set dns_servers_str = dns_servers | join(',') %}
+
+
+    {# Macro to construct interface names #}
+    {%- macro construct_interface_name(interface) -%}
+      {%- if interface.interface_type == 'physical' -%}
+        {{ interface.network_type }}{{ interface.network_id }}{{ interface.type_interface_id }}
+      {%- elif interface.interface_type == 'bond' -%}
+        {{ interface.interface_type }}{{ interface.network_id }}{{ interface.type_interface_id }}
+      {%- elif interface.interface_type == 'vlan' -%}
+        {{ interface.interface_type }}{{ interface.network_id }}{{ interface.type_interface_id }}
+      {%- else -%}
+        {{ interface.type_interface_id }}
+      {%- endif %}
+    {%- endmacro -%}
+
+
+    <backend>wicked</backend>
+    <keep_install_network config:type="boolean">false</keep_install_network>
+    <setup_before_proposal config:type="boolean">true</setup_before_proposal>
+    <start_immediately config:type="boolean">true</start_immediately>
+    <dns>
+      <dhcp_hostname config:type="boolean">false</dhcp_hostname>
+      <hostname>{{instance_subdomain_permanent}}</hostname>
+      <nameservers config:type="list">
+        {%- for server in dns_servers %}
+          <nameserver>{{server}}</nameserver>
+        {%- endfor %}
+      </nameservers>
+      <resolv_conf_policy>auto</resolv_conf_policy>
+    </dns>
+    <net-udev config:type="list">
+      <rule>
+        {%- for interface in interface_physical %}
+          <name>{{construct_interface_name(interface)}}</name>
+          <rule>ATTR{address}</rule>
+          <value>{{interface.mac_address | lower}}</value>
+        {%- endfor %}
+      </rule>
+    </net-udev>
+
+    <interfaces config:type="list">
+
+      {%- for interface in interface_physical %}
+        {%- set is_bond_slave = false %}
+        {%- for bond in interface_bond %}
+          {%- if interface.type_interface_id in [bond.members[0].id, bond.members[1].id] %}
+            {%- set is_bond_slave = true %}
+          {%- endif %}
+        {%- endfor %}
+        <interface>
+          <name>{{construct_interface_name(interface)}}</name>
+          <startmode>auto</startmode>
+          {%- if is_bond_slave %}
+            <bootproto>none</bootproto>
+          {%- elif interface.ipv4_addresses | length > 0 %}
+            <bootproto>static</bootproto>
+            <ipaddr>{{interface.ipv4_addresses[0].cidr}}</ipaddr>
+            {%- if interface.ipv6_addresses | length > 0 %}
+            <aliases>
+              <alias0>
+                <IPADDR>{{interface.ipv6_addresses[0].cidr}}</IPADDR>
+              </alias0>
+            </aliases>
+            {%- endif %}
+          {%- elif interface.ipv6_addresses | length > 0 %}
+            <bootproto>static</bootproto>
+            <ipaddr>{{interface.ipv6_addresses[0].cidr}}</ipaddr>
+            <mtu>{{interface.mtu}}</mtu>
+          {%- else %}
+            <bootproto>none</bootproto>
+          {%- endif %}
+          <mtu>{{interface.mtu}}</mtu>
+        </interface>
+      {%- endfor %}
+
+      {%- for interface in interface_bond %}
+        <interface>
+          <name>{{construct_interface_name(interface)}}</name>
+          <startmode>auto</startmode>
+          {%- if interface.ipv4_addresses | length > 0 %}
+            <bootproto>static</bootproto>
+            <ipaddr>{{interface.ipv4_addresses[0].cidr}}</ipaddr>
+            {%- if interface.ipv6_addresses | length > 0 %}
+            <aliases>
+              <alias0>
+                <IPADDR>{{interface.ipv6_addresses[0].cidr}}</IPADDR>
+              </alias0>
+            </aliases>
+            {%- endif %}
+          {%- elif interface.ipv6_addresses | length > 0 %}
+            <bootproto>static</bootproto>
+            <ipaddr>{{interface.ipv6_addresses[0].cidr}}</ipaddr>
+          {%- else %}
+            <bootproto>none</bootproto>
+          {%- endif %}
+          <bonding_master>yes</bonding_master>
+          <bonding_module_opts>mode={{ interface.parameters.mode }}{% if interface.parameters.mii_monitor_interval %} miimon={{ interface.parameters.mii_monitor_interval }}{% endif %}{% if interface.parameters.lacp_rate %} lacp_rate={{ interface.parameters.lacp_rate }}{% endif %}{% if interface.parameters.transmit_hash_policy %} xmit_hash_policy={{ interface.parameters.transmit_hash_policy }}{% endif %}</bonding_module_opts>
+          {%- for physical_interface in interface_physical %}
+            {%- if physical_interface.type_interface_id in [interface.members[0].id, interface.members[1].id] %}
+            <bonding_slave{{loop.index0}}>{{construct_interface_name(physical_interface)}}</bonding_slave{{loop.index0}}>
+            {%- endif %}
+          {%- endfor %}
+          <mtu>{{interface.mtu}}</mtu>
+        </interface>
+      {%- endfor %}
+    </interfaces>
+
+    {%- for interface in interface_vlan %}
+      <interface t="map">
+        <bootproto>static</bootproto>
+        {% if interface.type == "physical" %}
+          {% for physical_interface in interface_physical %}
+            {% if physical_interface.type_interface_id == interface.id %}
+        <etherdevice>{{construct_interface_name(physical_interface)}}</etherdevice>
+            {% endif %}
+          {% endfor %}
+        {% elif interface.type == "bond" %}
+          {% for bond_interface in interface_bond %}
+            {% if bond_interface.type_interface_id == interface.id %}
+        <etherdevice>{{construct_interface_name(bond_interface)}}</etherdevice>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        <name>vlan{{interface.vlan_id}}</name>
+        {%- if interface.ipv4_addresses | length > 0 %}
+          <ipaddr>{{interface.ipv4_addresses[0].cidr}}</ipaddr>
+          {%- if interface.ipv6_addresses | length > 0 %}
+            <aliases>
+              <alias0>
+                <IPADDR>{{interface.ipv6_addresses[0].cidr}}</IPADDR>
+              </alias0>
+            </aliases>
+          {%- endif %}
+        {%- elif interface.ipv6_addresses | length > 0 %}
+          <ipaddr>{{interface.ipv6_addresses[0].cidr}}</ipaddr>
+        {%- endif %}
+        <mtu>{{interface.mtu}}</mtu>
+        <startmode>auto</startmode>
+        <vland_id>{{interface.vlan_id}}</vland_id>
+      </interface>
+    {%- endfor %}
+
+    <ipv6 config:type="boolean">true</ipv6>
+    <routing>
+      <ipv4_forward config:type="boolean">false</ipv4_forward>
+      <ipv6_forward config:type="boolean">false</ipv6_forward>
+      <routes config:type="list">
+        <route>
+          <destination>default</destination>
+          {%- set default_device = "" %}
+          {%- set default_gateway = "" %}
+          {%- for interface in interface_vlan %}
+            {%- if interface.network_type == "wan" and default_device == "" %}
+              {%- set default_device = "vlan" ~ interface.vlan_id %}
+              {%- set default_gateway = interface.ipv4_addresses[0].gateway %}
+            {%- endif %}
+          {%- endfor %}
+          {%- if default_device == "" %}
+            {%- for interface in interface_bond %}
+              {%- if interface.network_type == "wan" and default_device == "" %}
+                {%- set default_device = construct_interface_name(interface) %}
+                {%- set default_gateway = interface.ipv4_addresses[0].gateway %}
+              {%- endif %}
+            {%- endfor %}
+          {%- endif %}
+          {%- if default_device == "" %}
+            {%- for interface in interface_physical %}
+              {%- if interface.network_type == "wan" and default_device == "" %}
+                {%- set default_device = construct_interface_name(interface) %}
+                {%- set default_gateway = interface.ipv4_addresses[0].gateway %}
+              {%- endif %}
+            {%- endfor %}
+          {%- endif %}
+          <device>{{ default_device }}</device>
+          <gateway>{{ default_gateway }}</gateway>
+        </route>
+      </routes>
+    </routing>
+  </networking>
+
+  <!-- User Settings -->
+  <users config:type="list">
+    <user>
+      <username>root</username>
+      <user_password>{{initial_password}}</user_password> <!-- Replace with desired password -->
+      <encrypted config:type="boolean">false</encrypted> <!-- Indicates plain text password -->
+      <authorized_keys config:type="list">
+        {%- if user_ssh_key and (user_ssh_key | length) %}
+          {%- for key in user_ssh_key %}
+        <listentry> {{ key }} </listentry>
+          {%- endfor %}
+        {%- endif %}
+        {%- if management_ssh_key %}
+        <listentry> {{ management_ssh_key }} </listentry>
+        {%- endif %}
+      </authorized_keys>
+    </user>
+  </users>
+
+  <!-- NTP Client Configuration -->
+  <ntp-client>
+    <ntp_policy>auto</ntp_policy>
+    <ntp_servers config:type="list">
+      <ntp_server>
+        <address>pool.ntp.org</address>
+        <iburst config:type="boolean">false</iburst>
+        <offline config:type="boolean">true</offline>
+      </ntp_server>
+    </ntp_servers>
+    <ntp_sync>15</ntp_sync>
+  </ntp-client>
+
 </profile>
