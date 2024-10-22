@@ -1,10 +1,37 @@
 ####version=RHEL9
-ignoredisk --only-use=sda
-# System bootloader configuration
-bootloader --append=" crashkernel=auto" --location=mbr --boot-drive=sda
+
+%pre --interpreter /bin/bash --erroronfail --log=/root/ks.log
+
+# Identify the Dell BOSS disk based on the name
+DISK=$(lsblk -dpno NAME,MODEL | grep "BOSS" | awk '{print $1}')
+
+# If Dell BOSS is not found, select the smallest available disk
+if [ -z "$DISK" ]; then
+  echo "Dell BOSS disk not found. Selecting the smallest available disk."
+  DISK=$(lsblk -dpno NAME,SIZE,TYPE | grep -w 'disk' | grep -v zram| sort -k2 -h | head -n 1 | awk '{print $1}')
+fi
+
+# Check if a disk was found
+if [ -z "$DISK" ]; then
+  echo "Error: No disks found!" >/tmp/disk.log
+  exit 1
+fi
+
+echo "Using disk: $DISK" > /tmp/disk.log
+
+# Export the detected disk name to be used in the Kickstart configuration
+echo "ignoredisk --only-use=$DISK" >> /tmp/pre-ks.cfg
+echo "bootloader --append=\" crashkernel=auto\" --location=mbr --boot-drive=$DISK" >> /tmp/pre-ks.cfg
+echo "clearpart --all --initlabel --drives=$DISK" >> /tmp/pre-ks.cfg
+%end
+
+%include /tmp/pre-ks.cfg
+
+# Automatic partitioning
 autopart --type=lvm
-# Partition clearing information
-clearpart --all --initlabel --drives=sda
+
+# use %pre-install for scripts after disk and network are configured, but before other stuff.
+
 # Use text mode install
 text
 # Keyboard layouts
