@@ -136,15 +136,15 @@
       <resolv_conf_policy>auto</resolv_conf_policy>
     </dns>
     <net-udev config:type="list">
-      {%- for interface in interface_physical %}
+       {%- for interface in interface_physical %} 
         <rule>
-        <name>{{construct_interface_name(interface)}}</name>
-        <rule>ATTR{address}</rule>
-        <value>{{interface.mac_address | lower}}</value>
+          <name>{{construct_interface_name(interface)}}</name>
+          <rule>ATTR{address}</rule>
+          <value>{{interface.mac_address | lower}}</value>
         </rule>
       {%- endfor %}
     </net-udev>
-
+    
     <interfaces config:type="list">
 
       {%- for interface in interface_physical %}
@@ -161,7 +161,7 @@
             <bootproto>none</bootproto>
           {%- elif interface.ipv4_addresses | length > 0 %}
             <bootproto>static</bootproto>
-            <ipaddr>{{interface.ipv4_addresses[0].cidr}}</ipaddr>
+            <ipaddr>{{interface.ipv4_addresses[0].cidr}}</ipaddr>            
             {%- if interface.ipv6_addresses | length > 0 %}
             <aliases>
               <alias0>
@@ -176,10 +176,12 @@
           {%- else %}
             <bootproto>none</bootproto>
           {%- endif %}
-          <mtu>{{interface.mtu}}</mtu>
+          {%- if interface.mtu %}
+            <mtu>{{interface.mtu}}</mtu>
+          {%- endif %}
         </interface>
       {%- endfor %}
-
+      
       {%- for interface in interface_bond %}
         <interface>
           <name>{{construct_interface_name(interface)}}</name>
@@ -193,7 +195,7 @@
                 <IPADDR>{{interface.ipv6_addresses[0].cidr}}</IPADDR>
               </alias0>
             </aliases>
-            {%- endif %}
+            {%- endif %}  
           {%- elif interface.ipv6_addresses | length > 0 %}
             <bootproto>static</bootproto>
             <ipaddr>{{interface.ipv6_addresses[0].cidr}}</ipaddr>
@@ -207,12 +209,13 @@
             <bonding_slave{{loop.index0}}>{{construct_interface_name(physical_interface)}}</bonding_slave{{loop.index0}}>
             {%- endif %}
           {%- endfor %}
-          <mtu>{{interface.mtu}}</mtu>
+          {%- if interface.mtu %}
+            <mtu>{{interface.mtu}}</mtu>
+          {%- endif %}
         </interface>
       {%- endfor %}
-    </interfaces>
 
-    {%- for interface in interface_vlan %}
+    {%- for interface in interface_vlan %}  
       <interface t="map">
         <bootproto>static</bootproto>
         {% if interface.type == "physical" %}
@@ -229,7 +232,7 @@
           {% endfor %}
         {% endif %}
         <name>vlan{{interface.vlan_id}}</name>
-        {%- if interface.ipv4_addresses | length > 0 %}
+        {%- if interface.ipv4_addresses | length > 0 %} 
           <ipaddr>{{interface.ipv4_addresses[0].cidr}}</ipaddr>
           {%- if interface.ipv6_addresses | length > 0 %}
             <aliases>
@@ -241,11 +244,14 @@
         {%- elif interface.ipv6_addresses | length > 0 %}
           <ipaddr>{{interface.ipv6_addresses[0].cidr}}</ipaddr>
         {%- endif %}
-        <mtu>{{interface.mtu}}</mtu>
+          {%- if interface.mtu %}
+            <mtu>{{interface.mtu}}</mtu>
+          {%- endif %}
         <startmode>auto</startmode>
-        <vland_id>{{interface.vlan_id}}</vland_id>
+        <vlan_id>{{interface.vlan_id}}</vlan_id>
       </interface>
     {%- endfor %}
+    </interfaces>
 
     <ipv6 config:type="boolean">true</ipv6>
     <routing>
