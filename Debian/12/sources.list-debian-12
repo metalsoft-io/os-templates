@@ -1,0 +1,22 @@
+deb http://deb.debian.org/debian bookworm main
+deb-src http://deb.debian.org/debian bookworm main
+
+deb http://deb.debian.org/debian-security/ bookworm-security main
+deb-src http://deb.debian.org/debian-security/ bookworm-security main
+
+deb http://deb.debian.org/debian bookworm-updates main
+deb-src http://deb.debian.org/debian bookworm-updates main
+
+# If you need the contrib and non-free components
+#deb http://deb.debian.org/debian bookworm main contrib non-free
+#deb-src http://deb.debian.org/debian bookworm main contrib non-free
+
+#deb http://deb.debian.org/debian-security/ bookworm-security main contrib non-free
+#deb-src http://deb.debian.org/debian-security/ bookworm-security main contrib non-free
+
+#deb http://deb.debian.org/debian bookworm-updates main contrib non-free
+#deb-src http://deb.debian.org/debian bookworm-updates main contrib non-free
+
+# If you need the Backports, contrib, and non-free components, uncomment below lines
+#deb http://deb.debian.org/debian bookworm-backports main contrib non-free
+#deb-src http://deb.debian.org/debian bookworm-backports main contrib non-free
