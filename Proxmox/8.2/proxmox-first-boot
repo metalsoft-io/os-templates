@@ -1,0 +1,3 @@
+#!/bin/sh
+
+/usr/sbin/shutdown -h now

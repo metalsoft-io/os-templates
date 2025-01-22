@@ -1,0 +1,59 @@
+[global]
+keyboard = "en-us"
+country = "us"
+fqdn = "{{ instance_subdomain_permanent }}"
+mailto = "mail@no.invalid"
+timezone = "America/Chicago"
+root_password = "{{initial_password}}"
+
+[network]
+source = "from-answer"
+
+{%- set interface_physical = [] %}
+{%- set interface_bond = [] %}
+{%- set interface_vlan = [] %}
+{%- for interface in network_configuration.interfaces %}
+  {%- if interface.interface_type == 'physical' %}
+    {%- set interface_physical = (interface_physical.push(interface), interface_physical) %}
+  {%- elif interface.interface_type == 'bond' %}
+    {%- set interface_bond = (interface_bond.push(interface), interface_bond) %}
+  {%- elif interface.interface_type == 'vlan' %}
+    {%- set interface_vlan = (interface_vlan.push(interface), interface_vlan) %}
+  {%- endif %}
+{%- endfor %}
+{%- for interface in interface_physical %}
+  {%- set is_bond_slave = false %}
+  {%- for bond in interface_bond %}
+    {%- if interface.type_interface_id in [bond.members[0].id, bond.members[1].id] %}
+      {%- set is_bond_slave = true %}
+    {%- endif %}
+  {%- endfor %}        
+  {%- if is_bond_slave %}             
+  {%- elif interface.ipv4_addresses | length > 0 %}
+  
+cidr="{{interface.ipv4_addresses[0].cidr}}"
+gateway="{{interface.ipv4_addresses[0].gateway}}"
+filter.ID_NET_NAME_MAC = "*{{ interface.mac_address | replace(":", "") | lower }}"
+
+  {%- elif interface.ipv6_addresses | length > 0 %}
+
+cidr="{{interface.ipv6_addresses[0].cidr}}"
+gateway="{{interface.ipv6_addresses[0].gateway}}"
+filter.ID_NET_NAME_MAC = "*{{ interface.mac_address | replace(":", "") | lower }}"
+
+  {%- else %}
+  {%- endif %}
+{%- endfor %}
+
+dns = "8.8.8.8"
+
+[disk-setup]
+filesystem = "ext4"
+lvm.swapsize = 0
+lvm.maxvz = 0
+disk_list = ['sda']
+
+[first-boot]
+source = "from-iso"
+ordering = "before-network"
+
