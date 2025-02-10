@@ -1,0 +1,63 @@
+# Bootloader configuration for UEFI
+bootloader --append="rhgb crashkernel=auto" --boot-drive=sda
+
+# Automated partitioning with LVM
+autopart --type=lvm --fstype=xfs
+clearpart --all --initlabel --drives=sda
+ignoredisk --only-use=sda
+zerombr
+
+# Use text mode install
+text --non-interactive
+
+#use appstream branch
+repo --name="AppStream" --baseurl=file:///run/install/sources/mount-0000-cdrom/AppStream
+
+# Keyboard layouts
+keyboard --xlayouts='us'
+
+# System language
+lang en_US.UTF-8
+
+# Network information config
+network --bootproto=static --device={{wan_interface_0_mac_address}} --ip={{wan_interface_0_ipv4_ip_0_address}} --netmask={{wan_interface_0_ipv4_ip_0_mask}} --gateway={{wan_interface_0_ipv4_ip_0_gateway}} --nameserver={{dns_server_ip_0}} --ipv6=auto --activate --hostname={{instance_subdomain_permanent}}
+
+# Root password
+rootpw --allow-ssh --plaintext {{initial_password}}
+# Run the Setup Agent on first boot
+firstboot --disable
+# Do not configure the X Window System
+skipx
+# Enforing selinux
+selinux --enforcing
+# System services
+services --enabled="chronyd"
+# System timezone
+timezone America/New_York --utc
+
+%addon com_redhat_kdump --enable --reserve-mb='auto'
+
+%end
+
+%packages
+@^server-product-environment
+%end
+
+%post
+
+# Set the swappiness value in /etc/sysctl.conf
+echo "vm.swappiness=10" >> /etc/sysctl.conf
+
+# Apply the sysctl changes immediately
+sysctl -p
+
+# The .ssh directory and authorized_keys set up
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+echo '{{management_ssh_key}}' > /root/.ssh/authorized_keys
+chmod 600 /root/.ssh/authorized_keys
+
+%end
+
+# Automatically power off the system after installation
+poweroff
