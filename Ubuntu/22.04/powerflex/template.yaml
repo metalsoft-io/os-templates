@@ -64,20 +64,19 @@ assets:
         mime: application/octet-stream
         usage: build_component
         type: other
-        url: http://repo.metalsoft.io/.iso/ubuntu/powerflex/linux-image-5.15.0-102-generic_5.15.0-102.112~20.04.1_amd64.deb
+#        url: http://repo.metalsoft.io/.iso/ubuntu/powerflex/linux-image-5.15.0-102-generic_5.15.0-102.112~20.04.1_amd64.deb
         template-type: simple
     linux-headers:
         isopath: /linux-headers-5.15.0-102-generic_5.15.0-102.112~20.04.1_amd64.deb
         mime: application/octet-stream
         usage: build_component
         type: other
-        url: http://repo.metalsoft.io/.iso/ubuntu/powerflex/linux-headers-5.15.0-102-generic_5.15.0-102.112~20.04.1_amd64.deb
+ #       url: http://repo.metalsoft.io/.iso/ubuntu/powerflex/linux-headers-5.15.0-102-generic_5.15.0-102.112~20.04.1_amd64.deb
         template-type: simple
     powerflex-sdc:
         isopath: /EMC-ScaleIO-sdc-4.5-2100.105.Ubuntu.22.04.x86_64.deb
         mime: application/octet-stream
         usage: build_component
         type: other
-        url: http://repo.metalsoft.io/.iso/ubuntu/powerflex/EMC-ScaleIO-sdc-4.5-2100.105.Ubuntu.22.04.x86_64.deb
+#        url: http://repo.metalsoft.io/.iso/ubuntu/powerflex/EMC-ScaleIO-sdc-4.5-2100.105.Ubuntu.22.04.x86_64.deb
         template-type: simple
-
