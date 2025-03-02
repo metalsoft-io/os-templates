@@ -136,10 +136,10 @@ autoinstall:
     - curtin in-target --target=/target -- systemctl enable multipath-tools 2>/dev/null || true
     {%- endif %}
     {%- endif %}
-    - curtin in-target --target=/target -- apt install /cdrom/linux-modules-5.15.0-102-generic_5.15.0-102.112~20.04.1_amd64.deb
-    - curtin in-target --target=/target -- apt install /cdrom/linux-modules-extra-5.15.0-102-generic_5.15.0-102.112~20.04.1_amd64.deb
-    - curtin in-target --target=/target -- apt install /cdrom/linux-image-5.15.0-102-generic_5.15.0-102.112~20.04.1_amd64.deb
-    - curtin in-target --target=/target -- apt install /cdrom/linux-headers-5.15.0-102-generic_5.15.0-102.112~20.04.1_amd64.deb
+    - curtin in-target --target=/target -- dpkg -i /cdrom/linux-modules-5.15.0-102-generic_5.15.0-102.112_amd64.deb
+    - curtin in-target --target=/target -- dpkg -i /cdrom/linux-modules-extra-5.15.0-102-generic_5.15.0-102.112_amd64.deb
+    - curtin in-target --target=/target -- dpkg -i /cdrom/linux-image-5.15.0-102-generic_5.15.0-102.112_amd64.deb
+    - curtin in-target --target=/target -- dpkg -i /cdrom/linux-headers-5.15.0-102-generic_5.15.0-102.112_amd64.deb
     - curtin in-target --target=/target -- apt install /cdrom/EMC-ScaleIO-sdc-4.5-2100.105.Ubuntu.22.04.x86_64.deb
     - cp /cdrom/EMC-ScaleIO-sdc-4.5-2100.105.Ubuntu.22.04.x86_64.deb /target/root/EMC-ScaleIO-sdc-4.5-2100.105.Ubuntu.22.04.x86_64.deb
     - curtain in-target --target=/target -- grub-set-default "Advanced options for Ubuntu>Ubuntu, with Linux 5.15.0-102-generic"
