@@ -1,1 +1,0 @@
-Requires at least version v6.1 of the MetalSoft
