@@ -1,0 +1,48 @@
+serial 0
+default linux  # Set the 'linux' label as default for booting
+timeout 5  # Boot delay 5 
+
+display boot.msg
+
+# Menu display configuration
+menu clear
+menu background splash.png
+menu title RHEL CoreOS
+menu vshift 8
+menu rows 18
+menu margin 8
+menu helpmsgrow 15
+menu tabmsgrow 13
+
+# Menu color settings
+menu color border * #00000000 #00000000 none
+menu color sel 0 #ffffffff #00000000 none
+menu color title 0 #ff7ba3d0 #00000000 none
+menu color tabmsg 0 #ff3a6496 #00000000 none
+menu color unsel 0 #84b8ffff #00000000 none
+menu color hotsel 0 #84b8ffff #00000000 none
+menu color hotkey 0 #ffffffff #00000000 none
+menu color help 0 #ffffffff #00000000 none
+menu color scrollbar 0 #ffffffff #ff355594 none
+menu color timeout 0 #ffffffff #00000000 none
+menu color timeout_msg 0 #ffffffff #00000000 none
+menu color cmdmark 0 #84b8ffff #00000000 none
+menu color cmdline 0 #ffffffff #00000000 none
+
+# Message to press Tab for options
+menu tabmsg Press Tab for full configuration options on menu items.
+
+# Menu separators
+menu separator # insert an empty line
+menu separator # insert an empty line
+
+# Automated Install Boot Entry
+label linux
+  menu label ^RHEL CoreOS (Automated Install)
+  menu default  # Make this the default boot entry
+  kernel /images/pxeboot/vmlinuz
+  append initrd=/images/pxeboot/initrd.img rw coreos.inst.install_dev={{coreos_inst_install_dev}} coreos.inst.image_url=http://{{admin_wan_interface_0_ipv4_ip_0_address}}:8080/ocp4/rhcos coreos.inst.ignition_url=http://{{admin_wan_interface_0_ipv4_ip_0_address}}:8080/ocp4/{{coreos_instance_role}}.ign coreos.inst.shutdown coreos.inst.insecure=yes coreos.liveiso=rhcos-417.94.202408270355-0 ignition.firstboot ignition.platform.id=metal
+
+menu separator # insert an empty line
+
+menu end
