@@ -1,0 +1,44 @@
+authoritative;
+ddns-update-style none;
+allow booting;
+allow bootp;
+allow unknown-clients;
+ignore client-updates;
+default-lease-time 14400;
+max-lease-time 14400;
+
+# Subnet declaration for the network
+subnet {{admin_wan_interface_0_subnet}} netmask {{admin_wan_interface_0_netmask}} {
+  option routers {{admin_wan_interface_0_gateway}};
+  option subnet-mask {{admin_wan_interface_0_netmask}};
+  option domain-name "ocp.lan";  # Advertise the domain, e.g., "ocp.lan"
+  option domain-name-servers {{admin_wan_interface_0_ipv4_ip_0_address}};  # Use the server for DNS
+  #range 192.168.64.100 192.168.64.150;
+}
+
+# Static Host Assignments
+host ocp-bootstrap {
+  hardware ethernet {{bootstrap_wan_interface_0_mac_address}};
+  fixed-address {{bootstrap_wan_interface_0_ipv4_ip_0_address}};
+}
+host ocp-cp-1 {
+  hardware ethernet {{master_0_wan_interface_0_mac_address}};
+  fixed-address {{master_0_wan_interface_0_ipv4_ip_0_address}};
+}
+host ocp-cp-2 {
+  hardware ethernet {{master_1_wan_interface_0_mac_address}};
+  fixed-address {{master_1_wan_interface_0_ipv4_ip_0_address}};
+}
+host ocp-cp-3 {
+  hardware ethernet {{master_2_wan_interface_0_mac_address}};
+  fixed-address {{master_2_wan_interface_0_ipv4_ip_0_address}};
+}
+host ocp-w-1 {
+  hardware ethernet {{worker_0_wan_interface_0_mac_address}};
+  fixed-address {{worker_0_wan_interface_0_ipv4_ip_0_address}};
+}
+host ocp-w-2 {
+  hardware ethernet {{worker_1_wan_interface_0_mac_address}};
+  fixed-address {{worker_1_wan_interface_0_ipv4_ip_0_address}};
+}
+

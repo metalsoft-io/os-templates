@@ -1,0 +1,41 @@
+$TTL    604800
+@       IN      SOA     ocp-svc.ocp.lan. contact.ocp.lan (
+                  1     ; Serial
+             604800     ; Refresh
+              86400     ; Retry
+            2419200     ; Expire
+             604800     ; Minimum
+)
+        IN      NS      ocp-svc
+
+ocp-svc.ocp.lan.          IN      A       {{admin_wan_interface_0_ipv4_ip_0_address}}
+
+; Temp Bootstrap Node
+ocp-bootstrap.lab.ocp.lan.        IN      A      {{bootstrap_wan_interface_0_ipv4_ip_0_address}}
+
+; Control Plane Nodes
+ocp-cp-1.lab.ocp.lan.         IN      A      {{master_0_wan_interface_0_ipv4_ip_0_address}}
+ocp-cp-2.lab.ocp.lan.         IN      A      {{master_1_wan_interface_0_ipv4_ip_0_address}}
+ocp-cp-3.lab.ocp.lan.         IN      A      {{master_2_wan_interface_0_ipv4_ip_0_address}}
+
+; Worker Nodes
+ocp-w-1.lab.ocp.lan.        IN      A      {{worker_0_wan_interface_0_ipv4_ip_0_address}}
+ocp-w-2.lab.ocp.lan.        IN      A      {{worker_1_wan_interface_0_ipv4_ip_0_address}}
+
+; OpenShift Internal - Load balancer
+api.lab.ocp.lan.        IN    A    {{admin_wan_interface_0_ipv4_ip_0_address}}
+api-int.lab.ocp.lan.    IN    A    {{admin_wan_interface_0_ipv4_ip_0_address}}
+*.apps.lab.ocp.lan.     IN    A    {{admin_wan_interface_0_ipv4_ip_0_address}}
+
+; ETCD Cluster
+etcd-0.lab.ocp.lan.    IN    A     {{master_0_wan_interface_0_ipv4_ip_0_address}}
+etcd-1.lab.ocp.lan.    IN    A     {{master_1_wan_interface_0_ipv4_ip_0_address}}
+etcd-2.lab.ocp.lan.    IN    A     {{master_2_wan_interface_0_ipv4_ip_0_address}}
+
+; OpenShift Internal SRV records (cluster name = lab)
+_etcd-server-ssl._tcp.lab.ocp.lan.    86400     IN    SRV     0    10    2380    etcd-0.lab
+_etcd-server-ssl._tcp.lab.ocp.lan.    86400     IN    SRV     0    10    2380    etcd-1.lab
+_etcd-server-ssl._tcp.lab.ocp.lan.    86400     IN    SRV     0    10    2380    etcd-2.lab
+
+oauth-openshift.apps.lab.ocp.lan.     IN     A     {{admin_wan_interface_0_ipv4_ip_0_address}}
+console-openshift-console.apps.lab.ocp.lan.     IN     A     {{admin_wan_interface_0_ipv4_ip_0_address}}

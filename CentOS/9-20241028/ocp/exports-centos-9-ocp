@@ -1,0 +1,2 @@
+/shares/registry {{admin_wan_interface_0_subnet}}/{{admin_wan_interface_0_mask}}(rw,sync,root_squash,no_subtree_check,no_wdelay)
+/shares/csi {{admin_wan_interface_0_subnet}}/{{admin_wan_interface_0_mask}}(rw,sync,root_squash,no_subtree_check,no_wdelay)
