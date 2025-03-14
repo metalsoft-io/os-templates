@@ -17,12 +17,6 @@ assets:
         usage: build_component
         type: patch
         template-type: simple
-    ISOLINUX.CFG:
-        isopath: /ISOLINUX.CFG
-        mime: text/plain
-        usage: build_component
-        type: bootloader-config
-        template-type: simple
     KS.CFG:
         isopath: /KS.CFG
         mime: text/plain
