@@ -192,7 +192,13 @@ autoinstall:
         {%- if interface.mtu %}
         mtu: {{ interface.mtu }}
         {% endif -%}
-        {%- if (interface.ipv4_addresses | length) or (interface.ipv6_addresses | length) %}
+        {%- set vlan_has_ip = false %}
+        {%- for vlan_interface in interface_vlan %}
+        {%- if (vlan_interface.ipv4_addresses | length) or (vlan_interface.ipv6_addresses | length) or vlan_interface.dhcp4 %}
+        {%- set vlan_has_ip = true %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if not vlan_has_ip and ((interface.ipv4_addresses | length) or (interface.ipv6_addresses | length)) %}
         addresses:
         {%- for ipv4_address in interface.ipv4_addresses %}
         - {{ ipv4_address.cidr }}
@@ -224,6 +230,7 @@ autoinstall:
           {% endif -%}
         {% endfor -%}
         {% endif -%}
+
         {%- if interface.dns_nameservers.addresses | length %}
         nameservers:
           addresses:
@@ -261,7 +268,13 @@ autoinstall:
         {%- if interface.mtu %}
         mtu: {{ interface.mtu }}
         {%- endif %}
-        {%- if (interface.ipv4_addresses | length) or (interface.ipv6_addresses | length) %}
+        {%- set vlan_has_ip = false %}
+        {%- for vlan_interface in interface_vlan %}
+        {%- if (vlan_interface.ipv4_addresses | length) or (vlan_interface.ipv6_addresses | length) or vlan_interface.dhcp4 %}
+        {%- set vlan_has_ip = true %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if not vlan_has_ip and ((interface.ipv4_addresses | length) or (interface.ipv6_addresses | length)) %}
         addresses:
         {%- for ipv4_address in interface.ipv4_addresses %}
         - {{ ipv4_address.cidr }}
@@ -269,7 +282,7 @@ autoinstall:
         {%- for ipv6_address in interface.ipv6_addresses %}
         - {{ ipv6_address.cidr }}
         {%- endfor %}
-        {%- elseif interface.dhcp4 == true %}
+        {%- elseif not vlan_has_ip and interface.dhcp4 == true %}
         dhcp4: true
         {%- endif %}
         {%- if interface.dns_nameservers.addresses %}
@@ -301,6 +314,7 @@ autoinstall:
           {%- endif %}
         {%- endfor %}
         {%- endif %}
+
       {%- endfor %}
       {%- endif %}
     {%- if interface_vlan | length %}
@@ -340,6 +354,24 @@ autoinstall:
           {%- endfor %}
           {%- endif %}
         {%- endif %}
+        {%- if interface.routes | length %}
+        routes:
+        {%- for route in interface.routes %}
+        - to: {{ route.to }}
+          via: {{ route.via }}
+          {%- if route.metric %}
+          metric: {{ route.metric }}
+          {%- endif %}
+          {%- if route.on_link %}
+          on-link: {{ route.on_link }}
+          {%- endif %}
+          {%- if route.table %}
+          table: {{ route.table }}
+          {%- endif %}
+        {%- endfor %}
+        {%- endif %}
+
+
       {%- endfor %}
     {%- endif %}
 {%- endif %}
