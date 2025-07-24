@@ -1,0 +1,63 @@
+template:
+  name: Ubuntu 24.04 LTS
+  label: ubuntu-24-04-lts
+  description: Ubuntu 24.04 LTS
+  visibility: public
+  device:
+    architecture: x86_64
+    bootMode: uefi
+    type: server
+  imageBuild:
+    required: true
+  install:
+    driveType: local_drive
+    method: oob
+    readyMethod: wait_for_power_off
+  os:
+    name: Ubuntu
+    version: 24.04
+    credential:
+      username: ubuntu
+      password: secret
+      passwordType: plain
+  tags:
+    - ubuntu
+templateAssets:
+  - file:
+      name: grub.cfg
+      path: /boot/grub/grub.cfg
+      mimeType: text/plain
+      templatingEngine: true
+    templateId: 0
+    usage: build_component
+  - file:
+      name: meta-data
+      path: /meta-data
+      mimeType: text/plain
+      contentBase64: I2Nsb3VkLWNvbmZpZwo=
+      templatingEngine: true
+    templateId: 0
+    usage: build_component
+  - file:
+      name: ubuntu-22.04.4-live-server-amd64.iso
+      path: /ubuntu-22.04.4-live-server-amd64.iso
+      mimeType: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/ubuntu/ubuntu-22.04.4-live-server-amd64.iso
+      templatingEngine: false
+    templateId: 0
+    usage: build_source_image
+  - file:
+      name: user-data
+      path: /user-data
+      mimeType: text/plain
+      templatingEngine: true
+    templateId: 0
+    usage: build_component
+  - file:
+      name: vendor-data
+      path: /vendor-data
+      mimeType: text/plain
+      contentBase64: I2Nsb3VkLWNvbmZpZwo=
+      templatingEngine: true
+    templateId: 0
+    usage: build_component
