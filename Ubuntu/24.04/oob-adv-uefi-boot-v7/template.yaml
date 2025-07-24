@@ -5,59 +5,54 @@ template:
   visibility: public
   device:
     architecture: x86_64
-    bootMode: uefi
+    bootmode: uefi
     type: server
-  imageBuild:
+  imagebuild:
     required: true
   install:
-    driveType: local_drive
+    drivetype: local_drive
     method: oob
-    readyMethod: wait_for_power_off
+    readymethod: wait_for_power_off
   os:
     name: Ubuntu
     version: 24.04
     credential:
       username: ubuntu
       password: secret
-      passwordType: plain
+      passwordtype: plain
   tags:
     - ubuntu
-templateAssets:
+templateassets:
   - file:
       name: grub.cfg
       path: /boot/grub/grub.cfg
-      mimeType: text/plain
-      templatingEngine: true
-    templateId: 0
+      mimetype: text/plain
+      templatingengine: true
     usage: build_component
   - file:
       name: meta-data
       path: /meta-data
-      mimeType: text/plain
-      contentBase64: I2Nsb3VkLWNvbmZpZwo=
-      templatingEngine: true
-    templateId: 0
+      mimetype: text/plain
+      contentbase64: I2Nsb3VkLWNvbmZpZwo=
+      templatingengine: true
     usage: build_component
   - file:
       name: ubuntu-22.04.4-live-server-amd64.iso
       path: /ubuntu-22.04.4-live-server-amd64.iso
-      mimeType: application/octet-stream
+      mimetype: application/octet-stream
       url: https://repo.metalsoft.io/.iso/ubuntu/ubuntu-22.04.4-live-server-amd64.iso
-      templatingEngine: false
-    templateId: 0
+      templatingengine: false
     usage: build_source_image
   - file:
       name: user-data
       path: /user-data
-      mimeType: text/plain
-      templatingEngine: true
-    templateId: 0
+      mimetype: text/plain
+      templatingengine: true
     usage: build_component
   - file:
       name: vendor-data
       path: /vendor-data
-      mimeType: text/plain
-      contentBase64: I2Nsb3VkLWNvbmZpZwo=
-      templatingEngine: true
-    templateId: 0
+      mimetype: text/plain
+      contentbase64: I2Nsb3VkLWNvbmZpZwo=
+      templatingengine: true
     usage: build_component
