@@ -51,6 +51,17 @@ autoinstall:
   # https://ubuntu.com/server/docs/install/autoinstall-reference#ssh
   ssh:
     install-server: true
+    {% if managementSSHKey or (userSSHKeys and (userSSHKeys | length)) -%}
+    authorized-keys:
+    {%- if userSSHKeys and (userSSHKeys | length) %}
+    {%- for key in userSSHKeys %}
+      - {{ key }}
+    {%- endfor %}
+    {%- endif %}
+    {%- if managementSSHKey %}
+      - {{ managementSSHKey }}
+    {%- endif %}
+    {%- endif %}
     allow-pw: true
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#snaps
@@ -68,7 +79,6 @@ autoinstall:
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#late-commands
   late-commands:
-    - cp /cdrom/vtest /target/vtest
     - echo "Done"
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#error-commands
