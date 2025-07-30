@@ -18,7 +18,7 @@ template:
     version: 24.04
     credential:
       username: ubuntu
-      password: secret
+      password: Setup00!
       passwordtype: plain
   tags:
     - ubuntu
