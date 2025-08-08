@@ -1,6 +1,6 @@
 template:
-  name: RHEL9.3
-  label: rhel-9-33
+  name: RHEL 9.3
+  label: rhel-9-3
   description: RHEL 9.3
   visibility: public
   device:
