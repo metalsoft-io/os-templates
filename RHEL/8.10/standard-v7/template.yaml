@@ -1,0 +1,48 @@
+template:
+  name: RHEL 8.10
+  label: rhel-8-10
+  description: RHEL 8.10
+  visibility: public
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: "oob"
+    readymethod: "wait_for_power_off"
+  os:
+    credential:
+      password: "redhatrocks!"
+      passwordtype: "plain"
+      username: "redhat"
+    name: "Rhel"
+    sshport: 22
+    version: "8.10"
+  tags:
+    - "rhel"
+templateassets:
+  - 
+    file:
+      mimetype: "text/plain"
+      name: "ks.cfg"
+      path: "/ks.cfg"
+      templatingengine: true
+    usage: "build_component"
+  - 
+    file:
+      mimetype: "text/plain"
+      name: "grub.cfg"
+      path: "/EFI/BOOT/grub.cfg"
+      templatingengine: true
+    usage: "build_component"
+  - 
+    file:
+      mimetype: "application/octet-stream"
+      name: "rhel-8.10-x86_64-dvd.iso"
+      path: "/rhel-8.10-x86_64-dvd.iso"
+      templatingengine: false
+      url: "http://repo.metalsoft.io/.iso/rhel/rhel-8.10-x86_64-dvd.iso"
+    usage: "build_source_image"
