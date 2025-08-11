@@ -1,7 +1,7 @@
 template:
-  name: RHEL 9.3
-  label: rhel-9-3
-  description: RHEL 9.3
+  name: RHEL 10.0
+  label: rhel-10-0
+  description: RHEL 10.0
   visibility: public
   device:
     architecture: x86_64
@@ -20,7 +20,7 @@ template:
       username: "redhat"
     name: "Rhel"
     sshport: 22
-    version: "9.3"
+    version: "10.0"
   tags:
     - "rhel"
 templateassets:
@@ -41,8 +41,8 @@ templateassets:
   - 
     file:
       mimetype: "application/octet-stream"
-      name: "rhel-9.3-x86_64-dvd.iso"
-      path: "/rhel-9.3-x86_64-dvd.iso"
+      name: "rhel-10.0-x86_64-dvd.iso"
+      path: "/rhel-10.0-x86_64-dvd.iso"
       templatingengine: false
-      url: "http://repo.metalsoft.io/.iso/rhel/rhel-9.3-x86_64-dvd.iso"
+      url: "http://repo.metalsoft.io/.iso/rhel/rhel-10.0-x86_64-dvd.iso"
     usage: "build_source_image"
