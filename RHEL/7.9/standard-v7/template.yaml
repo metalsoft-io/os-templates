@@ -44,5 +44,5 @@ templateassets:
       name: "rhel-7.9-x86_64-dvd.iso"
       path: "/rhel-7.9-x86_64-dvd.iso"
       templatingengine: false
-      url: "http://repo.metalsoft.io/.iso/rhel/rhel-7.9-x86_64-dvd.iso"
+      url: "http://repo.metalsoft.io/.iso/rhel/rhel-server-7.9-x86_64-dvd.iso"
     usage: "build_source_image"
