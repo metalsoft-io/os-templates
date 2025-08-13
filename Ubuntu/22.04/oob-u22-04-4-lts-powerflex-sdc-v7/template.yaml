@@ -47,6 +47,7 @@ templateassets:
       mimetype: application/octet-stream
       url: http://repo.metalsoft.io/.powerflex/linux-modules-6.5.0-27-generic_6.5.0-27.28-22.04.1_amd64.deb
       templatingengine: false
+    usage: build_component
   - file:
       name: linux-image-6.5.0-27-generic_6.5.0-27.28-22.04.1_amd64.deb
       path: /linux-image-6.5.0-27-generic_6.5.0-27.28-22.04.1_amd64.deb
