@@ -32,7 +32,6 @@ templateassets:
       name: meta-data
       path: /meta-data
       mimetype: text/plain
-      contentbase64: I2Nsb3VkLWNvbmZpZwo=
       templatingengine: true
     usage: build_component
   - file:
@@ -52,7 +51,6 @@ templateassets:
       name: vendor-data
       path: /vendor-data
       mimetype: text/plain
-      contentbase64: I2Nsb3VkLWNvbmZpZwo=
       templatingengine: true
     usage: build_component
   - file:
