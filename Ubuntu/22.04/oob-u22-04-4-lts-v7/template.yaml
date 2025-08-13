@@ -1,8 +1,8 @@
 template:
-  name: Ubuntu 24.04 LTS
-  label: ubuntu-24-04-lts
-  description: Ubuntu 24.04 LTS
-  visibility: public
+  name: Ubuntu 22.04.4 LTS
+  label: ubuntu-22-04-4-lts
+  description: Ubuntu 22.04.4 LTS
+  visibility: private
   device:
     architecture: x86_64
     bootmode: uefi
@@ -15,11 +15,10 @@ template:
     readymethod: wait_for_power_off
   os:
     name: Ubuntu
-    version: 24.04
+    version: 22.04.4
     credential:
       username: ubuntu
-      password: Setup00!
-      passwordtype: plain
+      passwordtype: generated
   tags:
     - ubuntu
 templateassets:
@@ -51,6 +50,12 @@ templateassets:
   - file:
       name: vendor-data
       path: /vendor-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: 01-netcfg.yaml
+      path: /01-netcfg.yaml
       mimetype: text/plain
       templatingengine: true
     usage: build_component
