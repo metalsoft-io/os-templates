@@ -1,0 +1,169 @@
+#cloud-config
+# https://ubuntu.com/server/docs/install/autoinstall
+autoinstall:
+  version: 1
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#early-commands
+  early-commands:
+    - echo "Early commnads ..."
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#locale
+  locale: en_US.utf8
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#refresh-installer
+  refresh-installer:
+    update: no
+    channel: "stable/ubuntu-$REL"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#keyboard
+  keyboard:
+    layout: "us"
+    variant: ""
+    toggle:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#source
+  # source:
+  #   id: "ubuntu-server-minimal"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#proxy
+  # proxy:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#apt
+  # https://curtin.readthedocs.io/en/latest/topics/apt_source.html
+  apt:
+    preserve_sources_list: false
+    mirror-selection:
+      primary:
+        - country-mirror
+        - arches: [i386, amd64]
+          uri: "http://archive.ubuntu.com/ubuntu"
+        - arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
+          uri: "http://ports.ubuntu.com/ubuntu-ports"
+    fallback: offline-install
+    geoip: true
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#storage
+  # a superset of that supported by curtin: https://curtin.readthedocs.io/en/latest/topics/storage.html
+  # The extensions to the curtin syntax are around disk selection and partition/logical volume sizing.
+  storage:
+    layout:
+      name: direct
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#ssh
+  ssh:
+    install-server: true
+    {% if managementSSHKey or (userSSHKeys and (userSSHKeys | length)) -%}
+    authorized-keys:
+    {%- if userSSHKeys and (userSSHKeys | length) %}
+    {%- for key in userSSHKeys %}
+      - {{ key }}
+    {%- endfor %}
+    {%- endif %}
+    {%- if managementSSHKey %}
+      - {{ managementSSHKey }}
+    {%- endif %}
+    {%- endif %}
+    allow-pw: true
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#snaps
+  # snaps:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#debconf-selections
+  # debconf-selections:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#packages
+  # packages:
+  #   - curl
+  #   - gnupg
+  #   - lsb-release
+  #   - software-properties-common
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#late-commands
+  late-commands:
+    - cp /cdrom/EMC-ScaleIO-sdc-4.5-2100.105.Ubuntu.22.04.x86_64.deb /target/root/
+    - cp /cdrom/linux-modules-6.5.0-27-generic_6.5.0-27.28-22.04.1_amd64.deb /target/root/
+    - cp /cdrom/linux-image-6.5.0-27-generic_6.5.0-27.28-22.04.1_amd64.deb /target/root/
+    - curtin in-target --target=/target -- sh -c '/usr/bin/dpkg -i /root/linux-modules-6.5.0-27-generic_6.5.0-27.28-22.04.1_amd64.deb'
+    - curtin in-target --target=/target -- sh -c '/usr/bin/dpkg -i /root/linux-image-6.5.0-27-generic_6.5.0-27.28-22.04.1_amd64.deb'
+    - cp /cdrom/01-netcfg.yaml /target/etc/netplan/01-netcfg.yaml
+    ## Make sure to replace MDM_IP with the actual IP addresses of the MDM
+    ## Example for multiple MDMs: MDM_IP=192.168.169.10,192.168.170.10
+    - curtin in-target --target=/target -- sh -c 'MDM_IP=<<1.2.3.4>> /usr/bin/dpkg -i /root/EMC-ScaleIO-sdc-4.5-2100.105.Ubuntu.22.04.x86_64.deb'    
+    - echo "Done"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#error-commands
+  # Shell commands to run after the install has failed.
+  # error-commands:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#reporting
+  reporting:
+    builtin:
+      type: print
+
+  network:
+    version: 2
+    renderer: networkd
+    ethernets: {}
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#user-data
+  user-data:
+    # = Runcmd =
+    # Run commands on first boot
+    runcmd:
+      - rm -f /etc/resolv.conf
+      - ln -s ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+    # = Timezone =
+    timezone: UTC
+    # = Set Hostname/Update Hostname =
+    preserve_hostname: false
+    prefer_fqdn_over_hostname: true
+    {%- if serverInstance and serverInstance.provisionInstanceDnsRecords %}
+    fqdn: {{ serverInstance.fqdn | default('test.local') }}
+    {%- if serverInstance.hostname %}
+    hostname: {{ serverInstance.hostname }}
+    {%- else %}
+    hostname: {{ serverInstance.label | default('test') }}
+    {%- endif %}
+    {% else %}
+    fqdn: test.local
+    hostname: test
+    {%- endif %}
+    # = Update Etc Hosts =
+    manage_etc_hosts: true
+    # = Set Passwords =
+    ssh_pwauth: true
+    {% if serverInstance and serverInstance.osCredentials -%}
+    {%- if serverInstance.osCredentials.initialPasswordEncrypted %}
+    password: {{ serverInstance.osCredentials.initialPasswordEncrypted }}
+    {%- else %}
+    password: Setup00!
+    {%- endif %}
+    {%- endif %}
+    chpasswd: { expire: false }
+    # = Users and Groups =
+    users:
+      - default
+      - name: root
+        lock_passwd: false
+    # = Growpart =
+    growpart:
+      mode: auto
+      devices: ['/']
+      ignore_growroot_disabled: false
+    # = SSH =
+    ssh_deletekeys: true
+    ssh_genkeytypes: [rsa, ecdsa, ed25519]
+    disable_root: false
+    allow_public_ssh_keys: true
+    # SSH Authkey Fingerprints
+    no_ssh_fingerprints: true
+    authkey_hash: sha256
+    # = Keys to Console =
+    ssh:
+      emit_keys_to_console: true
+    # = Package Update Upgrade Install =
+    package_update: false
+    package_upgrade: false
+    package_reboot_if_required: false
+    # = Final Message =
+    final_message: Cloud-init Done!
+  shutdown: "poweroff"
