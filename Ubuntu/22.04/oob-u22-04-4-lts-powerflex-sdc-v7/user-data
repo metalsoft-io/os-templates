@@ -79,6 +79,15 @@ autoinstall:
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#late-commands
   late-commands:
+    - cp /cdrom/EMC-ScaleIO-sdc-4.5-2100.105.Ubuntu.22.04.x86_64.deb /target/root/
+    - cp /cdrom/linux-modules-6.5.0-27-generic_6.5.0-27.28-22.04.1_amd64.deb /target/root/
+    - cp /cdrom/linux-image-6.5.0-27-generic_6.5.0-27.28-22.04.1_amd64.deb /target/root/
+    - curtin in-target --target=/target -- sh -c '/usr/bin/dpkg -i /root/linux-modules-6.5.0-27-generic_6.5.0-27.28-22.04.1_amd64.deb'
+    - curtin in-target --target=/target -- sh -c '/usr/bin/dpkg -i /root/linux-image-6.5.0-27-generic_6.5.0-27.28-22.04.1_amd64.deb'
+    - cp /cdrom/01-netcfg.yaml /target/etc/netplan/01-netcfg.yaml
+    ## Make sure to replace MDM_IP with the actual IP addresses of the MDM
+    ## Example for multiple MDMs: MDM_IP=192.168.169.10,192.168.170.10
+    - curtin in-target --target=/target -- sh -c 'MDM_IP=<<1.2.3.4>> /usr/bin/dpkg -i /root/EMC-ScaleIO-sdc-4.5-2100.105.Ubuntu.22.04.x86_64.deb'    
     - echo "Done"
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#error-commands
@@ -107,13 +116,28 @@ autoinstall:
     # = Set Hostname/Update Hostname =
     preserve_hostname: false
     prefer_fqdn_over_hostname: true
+    {%- if serverInstance and serverInstance.provisionInstanceDnsRecords %}
+    fqdn: {{ serverInstance.fqdn | default('test.local') }}
+    {%- if serverInstance.hostname %}
+    hostname: {{ serverInstance.hostname }}
+    {%- else %}
+    hostname: {{ serverInstance.label | default('test') }}
+    {%- endif %}
+    {% else %}
     fqdn: test.local
     hostname: test
+    {%- endif %}
     # = Update Etc Hosts =
     manage_etc_hosts: true
     # = Set Passwords =
     ssh_pwauth: true
+    {% if serverInstance and serverInstance.osCredentials -%}
+    {%- if serverInstance.osCredentials.initialPasswordEncrypted %}
+    password: {{ serverInstance.osCredentials.initialPasswordEncrypted }}
+    {%- else %}
     password: Setup00!
+    {%- endif %}
+    {%- endif %}
     chpasswd: { expire: false }
     # = Users and Groups =
     users:
