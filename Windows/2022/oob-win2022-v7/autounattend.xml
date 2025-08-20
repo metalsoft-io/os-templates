@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+    <settings pass="windowsPE">
+        <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <SetupUILanguage>
+                <UILanguage>en-US</UILanguage>
+            </SetupUILanguage>
+            <InputLocale>0409:00000409</InputLocale>
+            <SystemLocale>en-US</SystemLocale>
+            <UILanguage>en-US</UILanguage>
+            <UILanguageFallback>en-US</UILanguageFallback>
+            <UserLocale>en-US</UserLocale>
+        </component>
+        <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <DiskConfiguration>
+                <Disk wcm:action="add">
+                    <DiskID>0</DiskID>
+                    <WillWipeDisk>true</WillWipeDisk>
+                    <CreatePartitions>
+                        <CreatePartition wcm:action="add">
+                            <Order>3</Order>
+                            <Type>Primary</Type>
+                            <Size>500</Size>
+                    </CreatePartition>
+                    <CreatePartition wcm:action="add">
+                            <Order>1</Order>
+                            <Type>EFI</Type>
+                            <Size>500</Size>
+                    </CreatePartition>
+                    <CreatePartition wcm:action="add">
+                            <Order>2</Order>
+                            <Type>MSR</Type>
+                            <Size>128</Size>
+                    </CreatePartition>
+                    <CreatePartition wcm:action="add">
+                            <Order>4</Order>
+                            <Type>Primary</Type>
+                            <Extend>true</Extend>
+                    </CreatePartition>
+                    </CreatePartitions>
+                    <ModifyPartitions>
+                        <ModifyPartition wcm:action="add">
+                            <Order>3</Order>
+                            <PartitionID>3</PartitionID>
+                            <Label>WINRE</Label>
+                            <Format>NTFS</Format>
+                            <TypeID>DE94BBA4-06D1-4D40-A16A-BFD50179D6AC</TypeID>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                            <Order>1</Order>
+                            <PartitionID>1</PartitionID>
+                            <Label>System</Label>
+                            <Format>FAT32</Format>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                            <Order>2</Order>
+                            <PartitionID>2</PartitionID>
+                            </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                            <Order>4</Order>
+                            <PartitionID>4</PartitionID>
+                            <Label>OS</Label>
+                            <Letter>C</Letter>
+                            <Format>NTFS</Format>
+                        </ModifyPartition>
+                    </ModifyPartitions>
+                </Disk>
+            </DiskConfiguration>
+            <ImageInstall>
+                <OSImage>
+                    <InstallFrom>
+                        <MetaData wcm:action="add">
+                            <Value>Windows Server 2022 SERVERSTANDARD</Value>
+                            <Key>/IMAGE/NAME</Key>
+                        </MetaData>
+                    </InstallFrom>
+                    <InstallTo>
+                        <DiskID>0</DiskID>
+                        <PartitionID>4</PartitionID>
+                    </InstallTo>
+                    <InstallToAvailablePartition>false</InstallToAvailablePartition>
+                </OSImage>
+            </ImageInstall>
+            <UserData>
+                <ProductKey>VDYBN-27WPP-V4HQT-9VMD4-VMK7H</ProductKey>
+                <AcceptEula>true</AcceptEula>
+            </UserData>
+        </component>
+    </settings>
+    <settings pass="offlineServicing">
+        <component name="Microsoft-Windows-LUA-Settings" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <EnableLUA>false</EnableLUA>
+        </component>
+    </settings>
+    <settings pass="generalize">
+        <component name="Microsoft-Windows-Security-SPP" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <SkipRearm>1</SkipRearm>
+        </component>
+    </settings>
+    <settings pass="specialize">
+        <component name="Microsoft-Windows-TerminalServices-LocalSessionManager" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <fDenyTSConnections>false</fDenyTSConnections>
+        </component>
+        <component name="Networking-MPSSVC-Svc" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <FirewallGroups>
+                <FirewallGroup wcm:action="add" wcm:keyValue="RemoteDesktop">
+                    <Profile>all</Profile>
+                    <Group>@FirewallAPI.dll,-28752</Group>
+                    <Active>true</Active>
+                </FirewallGroup>
+            </FirewallGroups>
+        </component>
+        <component name="Microsoft-Windows-TerminalServices-RDP-WinStationExtensions" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <SecurityLayer>1</SecurityLayer>
+            <UserAuthentication>0</UserAuthentication>
+        </component>
+        <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <RunSynchronous>
+            {%- if siteConfig and (siteConfig.NTPServers | length) > 0 %}
+                <RunSynchronousCommand wcm:action="add">
+                    <Description>Add more target NTP Servers</Description>
+                    <Order>7</Order>
+                    <Path>powershell -Command &quot;Set-ItemProperty -Path \&quot;HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Parameters\&quot; -Name \&quot;NtpServer\&quot; -Value \&quot;time.windows.com,0x8 {{ siteConfig.NTPServers[0] }},0x8\&quot;&quot;</Path>
+                </RunSynchronousCommand>
+            {%- endif %}
+            </RunSynchronous>
+        </component>
+        <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <InputLocale>en-US</InputLocale>
+            <SystemLocale>en-US</SystemLocale>
+            <UILanguage>en-US</UILanguage>
+            <UILanguageFallback>en-US</UILanguageFallback>
+            <UserLocale>en-US</UserLocale>
+        </component>
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            {%- if serverInstance and serverInstance.provisionInstanceDnsRecords %}
+            <ComputerName>{{ serverInstance.hostname | default('test') }}</ComputerName>
+            {% else %}
+            <ComputerName>{{ serverInstance.label | default('test') }}</ComputerName>
+            {%- endif %}
+            <TimeZone>UTC</TimeZone>
+        </component>
+        {%- if network and network.interfaces and (network.interfaces | length) > 0 %}
+        {%- set interfacePhysical = [] %}
+        {%- for interface in network.interfaces %}
+        {%- if interface.interfaceType == 'physical' %}
+        {%- set interfacePhysical = (interfacePhysical.push(interface), interfacePhysical) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- endif %}
+        {%- if (interfacePhysical | length) > 0 %}
+        <component name="Microsoft-Windows-TCPIP" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <Interfaces>
+                {%- for interface in interfacePhysical %}
+                {%- if ( interface.macAddress
+                    and (interface.macAddress | trim) != ''
+                    and interface.ipv4Addresses
+                    and (interface.ipv4Addresses | length) > 0
+                ) -%}
+                <Interface wcm:action="add">
+                    <Ipv4Settings>
+                        <DhcpEnabled>false</DhcpEnabled>
+                    </Ipv4Settings>
+                    <Ipv6Settings>
+                        <DhcpEnabled>false</DhcpEnabled> 
+                    </Ipv6Settings>
+                    <Identifier>{{ interface.macAddress | replace(":", "-") }}</Identifier>
+                    <UnicastIpAddresses>
+                        <IpAddress wcm:action="add" wcm:keyValue="1">{{ interface.ipv4Addresses[0].cidr }}</IpAddress>
+                    </UnicastIpAddresses>
+                    {%- if interface.routes and (interface.routes | length) > 0 %}
+                    <Routes>
+                        {%- for route in interface.routes %}
+                        <Route wcm:action="add">
+                            <Identifier>{{ loop.index }}</Identifier>
+                            <Prefix>{{ route.to }}</Prefix>
+                            <NextHopAddress>{{ route.via }}</NextHopAddress>
+                        </Route>
+                        {%- endfor %}
+                    </Routes>
+                    {%- endif %}
+                </Interface>
+                {%- endif %}
+                {%- endfor %}
+            </Interfaces>
+        </component>
+        <component name="Microsoft-Windows-DNS-Client" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <Interfaces>
+            {%- for interface in interfacePhysical %}
+            {%- set interfaceDnsNameServers = false %}
+            {%- set siteConfigDnsNameServers = false %}
+                {%- if ( interface.macAddress and (interface.macAddress | trim) != '') -%}
+                {%- if interface.dnsNameServers and (interface.dnsNameServers | length) > 0 -%}
+                {%- set interfaceDnsNameServers = true -%}
+                {%- endif -%}
+                {%- if siteConfig and siteConfig.DNSServers and (siteConfig.DNSServers | length) > 0 %}
+                {%- set siteConfigDnsNameServers = true -%}
+                {%- endif %}
+                <Interface wcm:action="add">
+                   {%- if interfaceDnsNameServers or siteConfigDnsNameServers -%}
+                   {%- if interfaceDnsNameServers -%}
+                    <DNSServerSearchOrder>
+                        {%- for dnsServer in interface.dnsNameServers %}
+                        <IpAddress wcm:action="add" wcm:keyValue="{{ loop.index }}">{{ dnsServer }}</IpAddress>
+                        {%- endfor %}
+                    </DNSServerSearchOrder>
+                    {%- else %}
+                    <DNSServerSearchOrder>
+                        {%- for dnsServer in siteConfig.DNSServers %}
+                        <IpAddress wcm:action="add" wcm:keyValue="{{ loop.index }}">{{ dnsServer }}</IpAddress>
+                        {%- endfor %}
+                    </DNSServerSearchOrder>
+                    {%- endif %}
+                    {%- endif %}
+                    <Identifier>{{ interface.macAddress | replace(":", "-") }}</Identifier>
+                </Interface>
+                {%- endif %}
+            {%- endfor %}
+            </Interfaces>
+        </component>
+        {%- endif %}
+    </settings>
+    <settings pass="oobeSystem">
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <UserAccounts>
+                <AdministratorPassword>
+                {%- if serverInstance and serverInstance.osCredentials -%}
+                    {%- if serverInstance.osCredentials.initialPasswordEncrypted %}
+                    <Value>{{ serverInstance.osCredentials.initialPasswordEncrypted }}</Value>
+                    {%- else %}
+                    <Value>Setup00!</Value>
+                    {%- endif %}
+                {%- endif %}
+                    <PlainText>true</PlainText>
+                </AdministratorPassword>
+            </UserAccounts>
+            <FirstLogonCommands>
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>reg ADD HKLM\SYSTEM\CurrentControlSet\Control\Network\NewNetworkWindowOff /f</CommandLine>
+                    <Description>Disable network discovery prompt for all users</Description>
+                    <Order>10</Order>
+                </SynchronousCommand>
+                {%- if siteConfig and siteConfig.kmsServer -%}
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>cscript //b C:\Windows\System32\slmgr.vbs /skms {{ siteConfig.kmsServer }}</CommandLine>
+                    <Description>Add KMS server address</Description>
+                    <Order>11</Order>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>cscript //b C:\Windows\System32\slmgr.vbs /ato</CommandLine>
+                    <Description>Windows activation</Description>
+                    <Order>12</Order>
+                </SynchronousCommand>
+                {%- endif %}
+            </FirstLogonCommands>
+        </component>
+        <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <Reseal>
+                <ForceShutdownNow>true</ForceShutdownNow>
+            </Reseal>
+        </component>
+    </settings>
+</unattend>
