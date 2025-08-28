@@ -1,0 +1,37 @@
+template:
+  name: Windows Server 2025
+  label: windows-server-2025
+  description: Windows Server 2025 - version 10.0.26100
+  visibility: private
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: oob
+    readymethod: wait_for_power_off
+  os:
+    name: Windows
+    version: 10.0.26100
+    credential:
+      username: administrator
+      passwordtype: generated
+  tags:
+    - windows
+templateassets:
+  - file:
+      name: autounattend.xml
+      path: /autounattend.xml
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: SW_DVD9_Win_Server_STD_CORE_2025_24H2_64Bit_English_DC_STD_MLF_X23-81891BOSS.iso
+      path: /SW_DVD9_Win_Server_STD_CORE_2025_24H2_64Bit_English_DC_STD_MLF_X23-81891BOSS.iso
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/windows/Windows-2025/SW_DVD9_Win_Server_STD_CORE_2025_24H2_64Bit_English_DC_STD_MLF_X23-81891BOSS.iso
+      templatingengine: false
+    usage: build_source_image
