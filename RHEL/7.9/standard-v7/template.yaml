@@ -5,7 +5,7 @@ template:
   visibility: public
   device:
     architecture: x86_64
-    bootmode: uefi
+    bootmode: hybrid
     type: server
   imagebuild:
     required: true
@@ -36,6 +36,20 @@ templateassets:
       mimetype: "text/plain"
       name: "grub.cfg"
       path: "/EFI/BOOT/grub.cfg"
+      templatingengine: true
+    usage: "build_component"
+  - 
+    file:
+      mimetype: "text/plain"
+      name: "grub.conf"
+      path: "/isolinux/grub.conf"
+      templatingengine: true
+    usage: "build_component"
+  - 
+    file:
+      mimetype: "text/plain"
+      name: "isolinux.cfg"
+      path: "/isolinux/isolinux.cfg"
       templatingengine: true
     usage: "build_component"
   - 
