@@ -1,0 +1,33 @@
+template:
+  name: SUSE 15.6
+  label: suse-15-6
+  description: SUSE 15.6
+  visibility: public
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: "oob"
+    readymethod: "wait_for_power_off"
+  os:
+    credential:
+      password: "suserocks!"
+      passwordtype: "plain"
+      username: "root"
+    name: "SUSE"
+    sshport: 22
+    version: "15.6"
+  tags:
+    - "suse"
+templateassets:
+  - 
+    file:
+      mimetype: "text/plain"
+      name: "autoinst.xml"
+      path: "/autoinst.xml"
+      templatingengine: true
+    usage: "build_component"
