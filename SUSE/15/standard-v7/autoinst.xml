@@ -161,7 +161,7 @@
             <bootproto>none</bootproto>
           {%- elif interface.ipv4Addresses | length > 0 %}
             <bootproto>static</bootproto>
-            <ipaddr>{{interface.ipv4Addresses[0].ip}}/{{interface.ipv4Addresses[0].netmask}}</ipaddr>            
+            <ipaddr>{{interface.ipv4Addresses[0].cidr}}</ipaddr>            
             {%- if interface.ipv6Addresses | length > 0 %}
             <aliases>
               <alias0>
@@ -186,9 +186,9 @@
         <interface>
           <name>{{construct_interface_name(interface)}}</name>
           <startmode>auto</startmode>
-          {%- if interface.ipv4_addresses | length > 0 %}
+          {%- if interface.ipv4Addresses | length > 0 %}
             <bootproto>static</bootproto>
-            <ipaddr>{{interface.ipv4Addresses[0].ip}}/{{interface.ipv4Addresses[0].netmask}}</ipaddr>
+            <ipaddr>{{interface.ipv4Addresses[0].cidr}}</ipaddr>
             {%- if interface.ipv6Addresses | length > 0 %}
             <aliases>
               <alias0>
@@ -203,7 +203,7 @@
             <bootproto>none</bootproto>
           {%- endif %}
           <bonding_master>yes</bonding_master>
-          <bonding_module_opts>mode={{ interface.parameters.mode }}{% if interface.parameters.mii_monitor_interval %} miimon={{ interface.parameters.mii_monitor_interval }}{% endif %}{% if interface.parameters.lacp_rate %} lacp_rate={{ interface.parameters.lacp_rate }}{% endif %}{% if interface.parameters.transmit_hash_policy %} xmit_hash_policy={{ interface.parameters.transmit_hash_policy }}{% endif %}</bonding_module_opts>
+          <bonding_module_opts>mode={{ interface.parameters.mode | default('802.3ad') }}{% if interface.parameters.mii_monitor_interval %} miimon={{ interface.parameters.mii_monitor_interval }}{% endif %}{% if interface.parameters.lacp_rate %} lacp_rate={{ interface.parameters.lacp_rate }}{% endif %}{% if interface.parameters.transmit_hash_policy %} xmit_hash_policy={{ interface.parameters.transmit_hash_policy }}{% endif %}</bonding_module_opts>
           {%- for physical_interface in interface_physical %}
             {%- if physical_interface.typeInterfaceId in [interface.members[0].id, interface.members[1].id] %}
             <bonding_slave{{loop.index0}}>{{construct_interface_name(physical_interface)}}</bonding_slave{{loop.index0}}>
@@ -215,42 +215,42 @@
         </interface>
       {%- endfor %}
 
-    {%- for interface in interface_vlan %}  
-      <interface t="map">
-        <bootproto>static</bootproto>
-        {% if interface.links[0].interfaceType == "physical" %}
-          {% for physical_interface in interface_physical %}
-            {% if physical_interface.typeInterfaceId == interface.links[0].id %}
-        <etherdevice>{{construct_interface_name(physical_interface)}}</etherdevice>
-            {% endif %}
-          {% endfor %}
-        {% elif interface.links[0].interfaceType == "bond" %}
-          {% for bond_interface in interface_bond %}
-            {% if bond_interface.typeInterfaceId == interface.links[0].id %}
-        <etherdevice>{{construct_interface_name(bond_interface)}}</etherdevice>
-            {% endif %}
-          {% endfor %}
-        {% endif %}
-        <name>vlan{{interface.vlanId}}</name>
-        {%- if interface.ipv4_addresses | length > 0 %} 
-          <ipaddr>{{interface.ipv4_addresses[0].cidr}}</ipaddr>
-          {%- if interface.ipv6_addresses | length > 0 %}
-            <aliases>
-              <alias0>
-                <IPADDR>{{interface.ipv6Addresses[0].cidr}}</IPADDR>
-              </alias0>
-            </aliases>
+      {%- for interface in interface_vlan %}  
+        <interface t="map">
+          <bootproto>static</bootproto>
+          {%- if interface.links[0].interfaceType == "physical" %}
+            {%- for physical_interface in interface_physical %}
+              {%- if physical_interface.typeInterfaceId == interface.links[0].id %}
+          <etherdevice>{{construct_interface_name(physical_interface)}}</etherdevice>
+              {%- endif %}
+            {%- endfor %}
+          {%- elif interface.links[0].interfaceType == "bond" %}
+            {%- for bond_interface in interface_bond %}
+              {%- if bond_interface.typeInterfaceId == interface.links[0].id %}
+          <etherdevice>{{construct_interface_name(bond_interface)}}</etherdevice>
+              {%- endif %}
+            {%- endfor %}
           {%- endif %}
-        {%- elif interface.ipv6_addresses | length > 0 %}
-          <ipaddr>{{interface.ipv6_addresses[0].cidr}}</ipaddr>
-        {%- endif %}
+          <name>vlan{{interface.vlanId}}</name>
+          {%- if interface.ipv4Addresses | length > 0 %} 
+            <ipaddr>{{interface.ipv4Addresses[0].cidr}}</ipaddr>
+            {%- if interface.ipv6Addresses | length > 0 %}
+              <aliases>
+                <alias0>
+                  <IPADDR>{{interface.ipv6Addresses[0].cidr}}</IPADDR>
+                </alias0>
+              </aliases>
+            {%- endif %}
+          {%- elif interface.ipv6Addresses | length > 0 %}
+            <ipaddr>{{interface.ipv6Addresses[0].cidr}}</ipaddr>
+          {%- endif %}
           {%- if interface.mtu %}
             <mtu>{{interface.mtu}}</mtu>
           {%- endif %}
-        <startmode>auto</startmode>
-        <vlan_id>{{interface.vlanId}}</vlan_id>
-      </interface>
-    {%- endfor %}
+          <startmode>auto</startmode>
+          <vlan_id>{{interface.vlanId}}</vlan_id>
+        </interface>
+      {%- endfor %}
     </interfaces>
 
     <ipv6 config:type="boolean">true</ipv6>
