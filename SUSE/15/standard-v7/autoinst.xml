@@ -37,11 +37,253 @@
     <timezone>Etc/GMT</timezone>
   </timezone>
 
+  {# ============================================================================ #}
+  {# PARTITIONING CONFIGURATION - Customize these settings for your deployment #}
+  {# ============================================================================ #}
+
+  {# Disk Configuration #}
+  {%- set minimum_disk_size_gb = 100 %}
+
+  {# Partitioning Configuration #}
+  {%- set use_custom_partitioning = false %}
+  {%- set use_lvm = true %}                {# Use LVM (true) or standard partitions (false) #}
+  {%- set default_fstype = "xfs" %}        {# Default filesystem type (xfs, ext4, btrfs) #}
+
+  {# Partition Enable/Disable Flags - Set to false to skip a partition #}
+  {%- set enable_boot = true %}          {# Enable /boot partition (always recommended) #}
+  {%- set enable_boot_efi = true %}      {# Enable /boot/efi partition (required for UEFI) #}
+  {%- set enable_root = true %}          {# Enable / (root) partition (required) #}
+  {%- set enable_var = true %}           {# Enable /var partition #}
+  {%- set enable_var_log = false %}      {# Enable /var/log partition #}
+  {%- set enable_tmp = true %}           {# Enable /tmp partition #}
+  {%- set enable_swap = true %}          {# Enable swap partition #}
+  {%- set enable_home = true %}          {# Enable /home partition #}
+
+  {# Custom Partition Sizes (in MB) - Only used when use_custom_partitioning = true #}
+  {%- set boot_size = 1024 %}           {# /boot partition size #}
+  {%- set boot_efi_size = 512 %}        {# /boot/efi partition size #}
+  {%- set root_size = 20480 %}          {# / (root) partition size (20GB) #}
+  {%- set var_size = 102400 %}          {# /var partition size (100GB) #}
+  {%- set var_log_size = 10240 %}       {# /var/log partition size (10GB) #}
+  {%- set tmp_size = 2048 %}            {# /tmp partition size (2GB) #}
+  {%- set swap_size = 8192 %}           {# swap partition size (8GB) #}
+  {%- set home_min_size = 1024 %}       {# /home minimum size (grows to fill remaining space) #}
+
+  {# Custom Additional Partitions - Define your own partitions here #}
+  {# Each partition is defined as: {"mount": "/path", "size": MB, "name": "lv_name", "fstype": "fs", "options": "opts", "enabled": true/false} #}
+  {%- set custom_partitions = [
+    {"mount": "/data", "size": 51200, "name": "data", "fstype": default_fstype, "options": "", "enabled": false},
+    {"mount": "/app", "size": 20480, "name": "app", "fstype": default_fstype, "options": "", "enabled": false},
+    {"mount": "/backup", "size": 102400, "name": "backup", "fstype": default_fstype, "options": "", "enabled": false}
+  ] %}
+
   <!-- Partitioning Scheme -->
   <storage>
+    {%- if use_custom_partitioning %}
+    <partitioning config:type="list">
+      <drive>
+        <device>/dev/sda</device>
+        <initialize config:type="boolean">true</initialize>
+        <use>all</use>
+        <partitions config:type="list">
+          {%- if enable_boot_efi %}
+          <partition>
+            <create config:type="boolean">true</create>
+            <crypt_fs config:type="boolean">false</crypt_fs>
+            <filesystem config:type="symbol">vfat</filesystem>
+            <format config:type="boolean">true</format>
+            <loop_fs config:type="boolean">false</loop_fs>
+            <mount>/boot/efi</mount>
+            <mountby config:type="symbol">uuid</mountby>
+            <partition_id config:type="integer">259</partition_id>
+            <partition_nr config:type="integer">1</partition_nr>
+            <resize config:type="boolean">false</resize>
+            <size>{{ boot_efi_size }}MB</size>
+          </partition>
+          {%- endif %}
+          
+          {%- if enable_boot %}
+          <partition>
+            <create config:type="boolean">true</create>
+            <crypt_fs config:type="boolean">false</crypt_fs>
+            <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
+            <format config:type="boolean">true</format>
+            <loop_fs config:type="boolean">false</loop_fs>
+            <mount>/boot</mount>
+            <mountby config:type="symbol">uuid</mountby>
+            <partition_id config:type="integer">131</partition_id>
+            <partition_nr config:type="integer">{{ 2 if enable_boot_efi else 1 }}</partition_nr>
+            <resize config:type="boolean">false</resize>
+            <size>{{ boot_size }}MB</size>
+          </partition>
+          {%- endif %}
+
+          {%- if use_lvm %}
+          <partition>
+            <create config:type="boolean">true</create>
+            <crypt_fs config:type="boolean">false</crypt_fs>
+            <filesystem config:type="symbol">lvm</filesystem>
+            <format config:type="boolean">true</format>
+            <loop_fs config:type="boolean">false</loop_fs>
+            <lvm_group>system</lvm_group>
+            <mountby config:type="symbol">device</mountby>
+            <partition_id config:type="integer">142</partition_id>
+            <partition_nr config:type="integer">{{ 3 if enable_boot_efi and enable_boot else (2 if enable_boot_efi or enable_boot else 1) }}</partition_nr>
+            <resize config:type="boolean">false</resize>
+            <size>max</size>
+          </partition>
+          {%- else %}
+          {# Standard partitions without LVM #}
+          {%- if enable_root %}
+          <partition>
+            <create config:type="boolean">true</create>
+            <crypt_fs config:type="boolean">false</crypt_fs>
+            <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
+            <format config:type="boolean">true</format>
+            <loop_fs config:type="boolean">false</loop_fs>
+            <mount>/</mount>
+            <mountby config:type="symbol">uuid</mountby>
+            <partition_id config:type="integer">131</partition_id>
+            <partition_nr config:type="integer">{{ 3 if enable_boot_efi and enable_boot else (2 if enable_boot_efi or enable_boot else 1) }}</partition_nr>
+            <resize config:type="boolean">false</resize>
+            <size>max</size>
+          </partition>
+          {%- endif %}
+          {%- endif %}
+        </partitions>
+      </drive>
+    </partitioning>
+
+    {%- if use_lvm %}
+    <lvm config:type="list">
+      <lvm_group>
+        <device>/dev/sda{{ 3 if enable_boot_efi and enable_boot else (2 if enable_boot_efi or enable_boot else 1) }}</device>
+        <lvm_group_name>system</lvm_group_name>
+        <pesize>4M</pesize>
+        <lvm_lvs config:type="list">
+          {%- if enable_root %}
+          <lvm_lv>
+            <create config:type="boolean">true</create>
+            <crypt_fs config:type="boolean">false</crypt_fs>
+            <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
+            <format config:type="boolean">true</format>
+            <loop_fs config:type="boolean">false</loop_fs>
+            <lv_name>root</lv_name>
+            <mount>/</mount>
+            <mountby config:type="symbol">device</mountby>
+            <resize config:type="boolean">false</resize>
+            <size>{{ root_size }}MB</size>
+          </lvm_lv>
+          {%- endif %}
+
+          {%- if enable_var %}
+          <lvm_lv>
+            <create config:type="boolean">true</create>
+            <crypt_fs config:type="boolean">false</crypt_fs>
+            <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
+            <format config:type="boolean">true</format>
+            <loop_fs config:type="boolean">false</loop_fs>
+            <lv_name>var</lv_name>
+            <mount>/var</mount>
+            <mountby config:type="symbol">device</mountby>
+            <resize config:type="boolean">false</resize>
+            <size>{{ var_size }}MB</size>
+          </lvm_lv>
+          {%- endif %}
+
+          {%- if enable_var_log %}
+          <lvm_lv>
+            <create config:type="boolean">true</create>
+            <crypt_fs config:type="boolean">false</crypt_fs>
+            <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
+            <format config:type="boolean">true</format>
+            <loop_fs config:type="boolean">false</loop_fs>
+            <lv_name>var_log</lv_name>
+            <mount>/var/log</mount>
+            <mountby config:type="symbol">device</mountby>
+            <resize config:type="boolean">false</resize>
+            <size>{{ var_log_size }}MB</size>
+          </lvm_lv>
+          {%- endif %}
+
+          {%- if enable_tmp %}
+          <lvm_lv>
+            <create config:type="boolean">true</create>
+            <crypt_fs config:type="boolean">false</crypt_fs>
+            <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
+            <format config:type="boolean">true</format>
+            <loop_fs config:type="boolean">false</loop_fs>
+            <lv_name>tmp</lv_name>
+            <mount>/tmp</mount>
+            <mountby config:type="symbol">device</mountby>
+            <resize config:type="boolean">false</resize>
+            <size>{{ tmp_size }}MB</size>
+          </lvm_lv>
+          {%- endif %}
+
+          {%- if enable_swap %}
+          <lvm_lv>
+            <create config:type="boolean">true</create>
+            <crypt_fs config:type="boolean">false</crypt_fs>
+            <filesystem config:type="symbol">swap</filesystem>
+            <format config:type="boolean">true</format>
+            <loop_fs config:type="boolean">false</loop_fs>
+            <lv_name>swap</lv_name>
+            <mount>swap</mount>
+            <mountby config:type="symbol">device</mountby>
+            <resize config:type="boolean">false</resize>
+            <size>{{ swap_size }}MB</size>
+          </lvm_lv>
+          {%- endif %}
+
+          {# Custom partitions #}
+          {%- for partition in custom_partitions %}
+          {%- if partition.enabled %}
+          <lvm_lv>
+            <create config:type="boolean">true</create>
+            <crypt_fs config:type="boolean">false</crypt_fs>
+            <filesystem config:type="symbol">{{ partition.fstype }}</filesystem>
+            <format config:type="boolean">true</format>
+            <loop_fs config:type="boolean">false</loop_fs>
+            <lv_name>{{ partition.name }}</lv_name>
+            <mount>{{ partition.mount }}</mount>
+            <mountby config:type="symbol">device</mountby>
+            <resize config:type="boolean">false</resize>
+            <size>{{ partition.size }}MB</size>
+          </lvm_lv>
+          {%- endif %}
+          {%- endfor %}
+
+          {# /home partition (grows to fill remaining space) #}
+          {%- if enable_home %}
+          <lvm_lv>
+            <create config:type="boolean">true</create>
+            <crypt_fs config:type="boolean">false</crypt_fs>
+            <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
+            <format config:type="boolean">true</format>
+            <loop_fs config:type="boolean">false</loop_fs>
+            <lv_name>home</lv_name>
+            <mount>/home</mount>
+            <mountby config:type="symbol">device</mountby>
+            <resize config:type="boolean">false</resize>
+            <size>max</size>
+          </lvm_lv>
+          {%- endif %}
+        </lvm_lvs>
+      </lvm_group>
+    </lvm>
+    {%- endif %}
+
+    {%- else %}
+    {# Use automatic partitioning proposal #}
     <proposal>
-      <lvm config:type="boolean">true</lvm>
+      <lvm config:type="boolean">{{ use_lvm }}</lvm>
+      <resize_windows config:type="boolean">false</resize_windows>
+      <windows_delete_mode config:type="symbol">all</windows_delete_mode>
+      <linux_delete_mode config:type="symbol">all</linux_delete_mode>
+      <other_delete_mode config:type="symbol">all</other_delete_mode>
     </proposal>
+    {%- endif %}
   </storage>
 
   <!-- Software Selection -->
@@ -203,7 +445,7 @@
             <bootproto>none</bootproto>
           {%- endif %}
           <bonding_master>yes</bonding_master>
-          <bonding_module_opts>mode={{ interface.parameters.mode | default('802.3ad') }}{% if interface.parameters.mii_monitor_interval %} miimon={{ interface.parameters.mii_monitor_interval }}{% endif %}{% if interface.parameters.lacp_rate %} lacp_rate={{ interface.parameters.lacp_rate }}{% endif %}{% if interface.parameters.transmit_hash_policy %} xmit_hash_policy={{ interface.parameters.transmit_hash_policy }}{% endif %}</bonding_module_opts>
+          <bonding_module_opts>mode={{ interface.parameters.mode | default('802.3ad') }} miimon={{ interface.parameters.mii_monitor_interval | default(100) }}{% if interface.parameters.lacp_rate %} lacp_rate={{ interface.parameters.lacp_rate }}{% endif %}{% if interface.parameters.transmit_hash_policy %} xmit_hash_policy={{ interface.parameters.transmit_hash_policy }}{% endif %}</bonding_module_opts>
           {%- for physical_interface in interface_physical %}
             {%- if physical_interface.typeInterfaceId in [interface.members[0].id, interface.members[1].id] %}
             <bonding_slave{{loop.index0}}>{{construct_interface_name(physical_interface)}}</bonding_slave{{loop.index0}}>
