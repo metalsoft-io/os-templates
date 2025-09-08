@@ -10,8 +10,35 @@
 {# Disk Configuration #}
 {%- set minimum_disk_size_gb = 100 %}
 
+{# Disk Selection Options #}
+
+{# Option 1: Target specific device path (if you know it) #}
+{%- set target_disk_device = "" %}           {# e.g., "/dev/sda" - leave empty for automatic #}
+
+{# Option 2: Skip disks by model names #}
+{%- set skip_disk_models = [] %}             {# List of disk model names to skip (leave empty to disable) #}
+{# Examples: #}
+{# {%- set skip_disk_models = ["USB", "Virtual"] %}     # Skip USB and Virtual drives #}
+{# {%- set skip_disk_models = ["SAMSUNG", "WD"] %}      # Skip Samsung and Western Digital drives #}
+{# {%- set skip_disk_models = ["PERC"] %}               # Skip PERC virtual disks #}
+
+{# Option 3: Skip disks by driver names #}
+{%- set skip_disk_drivers = [] %}            {# List of disk driver names to skip (leave empty to disable) #}
+{# Examples: #}
+{# {%- set skip_disk_drivers = ["usb-storage"] %}       # Skip USB storage devices #}
+{# {%- set skip_disk_drivers = ["sr", "cdrom"] %}       # Skip CD/DVD drives #}
+{# {%- set skip_disk_drivers = ["virtio", "vmware"] %}  # Skip virtual disk drivers #}
+{# {%- set skip_disk_drivers = ["megaraid_sas"] %}      # Skip megaraid based RAID controllers #}
+
+{# Option 4: Size-based selection only #}
+{# Set target_disk_device, skip_disk_models, and skip_disk_drivers to empty for size-only selection #}
+
+{%- set use_specific_disk = (target_disk_device != "") %}
+{%- set use_model_skip = (skip_disk_models | length > 0) %}
+{%- set use_driver_skip = (skip_disk_drivers | length > 0) %}
+
 {# Partitioning Configuration #}
-{%- set use_custom_partitioning = true %}
+{%- set use_custom_partitioning = false %}
 {%- set use_lvm = true %}                {# Use LVM (true) or standard partitions (false) #}
 {%- set default_fstype = "xfs" %}        {# Default filesystem type (xfs, ext4, btrfs) #}
 
@@ -90,37 +117,48 @@
     <timezone>Etc/GMT</timezone>
   </timezone>
 
-  <!-- Software Selection -->
-  <software>
-    <install_recommended t="boolean">true</install_recommended>
-    <packages t="list">
-      <package>iputils</package>
-      <package>sudo</package>
-    </packages>
-    <products config:type="list">
-      <product>SLES</product>
-    </products>
-  </software>
-
   {%- if use_custom_partitioning %}
   <!-- Custom Partitioning Scheme -->
   <partitioning config:type="list">
-    <!-- Physical disk with boot partitions and LVM physical volume -->
     <drive>
-      <initialize config:type="boolean">true</initialize>
-      <use>all</use>
+      {%- if use_specific_disk %}
+      <!-- Use specific device if specified -->
+      <device>{{ target_disk_device }}</device>
+      {%- else %}
+      <!-- Automatic disk selection with filtering -->
       <skip_list config:type="list">
+        {%- if use_model_skip %}
+        <!-- Skip disks by model names -->
+        {%- for model in skip_disk_models %}
+        <listentry>
+          <skip_key>model</skip_key>
+          <skip_value>{{ model }}</skip_value>
+        </listentry>
+        {%- endfor %}
+        {%- endif %}
+        {%- if use_driver_skip %}
+        <!-- Skip disks by driver names -->
+        {%- for driver in skip_disk_drivers %}
+        <listentry>
+          <skip_key>driver</skip_key>
+          <skip_value>{{ driver }}</skip_value>
+        </listentry>
+        {%- endfor %}
+        {%- endif %}
+        <!-- Skip disks that are too small -->
         <listentry>
           <skip_key>size_k</skip_key>
           <skip_value>{{ minimum_disk_size_gb * 1024 * 1024 }}</skip_value>
           <skip_if_less_than config:type="boolean">true</skip_if_less_than>
         </listentry>
       </skip_list>
+      {%- endif %}
+      <initialize config:type="boolean">true</initialize>
+      <use>all</use>
       <partitions config:type="list">
         {%- if enable_boot_efi %}
         <partition>
           <create config:type="boolean">true</create>
-          <partition_nr config:type="integer">1</partition_nr>
           <partition_type>primary</partition_type>
           <size>{{ boot_efi_size }}MB</size>
           <mount>/boot/efi</mount>
@@ -132,7 +170,6 @@
         {%- if enable_boot %}
         <partition>
           <create config:type="boolean">true</create>
-          <partition_nr config:type="integer">{{ 2 if enable_boot_efi else 1 }}</partition_nr>
           <partition_type>primary</partition_type>
           <size>{{ boot_size }}MB</size>
           <mount>/boot</mount>
@@ -144,7 +181,6 @@
         {%- if use_lvm %}
         <partition>
           <create config:type="boolean">true</create>
-          <partition_nr config:type="integer">{{ 3 if enable_boot_efi and enable_boot else (2 if enable_boot_efi or enable_boot else 1) }}</partition_nr>
           <partition_type>primary</partition_type>
           <size>max</size>
           <lvm_group>system</lvm_group>
@@ -155,10 +191,79 @@
         {%- if enable_root %}
         <partition>
           <create config:type="boolean">true</create>
-          <partition_nr config:type="integer">{{ 3 if enable_boot_efi and enable_boot else (2 if enable_boot_efi or enable_boot else 1) }}</partition_nr>
+          <partition_type>primary</partition_type>
+          <size>{{ root_size }}MB</size>
+          <mount>/</mount>
+          <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
+          <format config:type="boolean">true</format>
+        </partition>
+        {%- endif %}
+
+        {%- if enable_var %}
+        <partition>
+          <create config:type="boolean">true</create>
+          <partition_type>primary</partition_type>
+          <size>{{ var_size }}MB</size>
+          <mount>/var</mount>
+          <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
+          <format config:type="boolean">true</format>
+        </partition>
+        {%- endif %}
+
+        {%- if enable_var_log %}
+        <partition>
+          <create config:type="boolean">true</create>
+          <partition_type>primary</partition_type>
+          <size>{{ var_log_size }}MB</size>
+          <mount>/var/log</mount>
+          <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
+          <format config:type="boolean">true</format>
+        </partition>
+        {%- endif %}
+
+        {%- if enable_tmp %}
+        <partition>
+          <create config:type="boolean">true</create>
+          <partition_type>primary</partition_type>
+          <size>{{ tmp_size }}MB</size>
+          <mount>/tmp</mount>
+          <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
+          <format config:type="boolean">true</format>
+        </partition>
+        {%- endif %}
+
+        {%- if enable_swap %}
+        <partition>
+          <create config:type="boolean">true</create>
+          <partition_type>primary</partition_type>
+          <size>{{ swap_size }}MB</size>
+          <mount>swap</mount>
+          <filesystem config:type="symbol">swap</filesystem>
+          <format config:type="boolean">true</format>
+        </partition>
+        {%- endif %}
+
+        {# Custom partitions #}
+        {%- for partition in custom_partitions %}
+        {%- if partition.enabled %}
+        <partition>
+          <create config:type="boolean">true</create>
+          <partition_type>primary</partition_type>
+          <size>{{ partition.size }}MB</size>
+          <mount>{{ partition.mount }}</mount>
+          <filesystem config:type="symbol">{{ partition.fstype }}</filesystem>
+          <format config:type="boolean">true</format>
+        </partition>
+        {%- endif %}
+        {%- endfor %}
+
+        {# /home partition (grows to fill remaining space) #}
+        {%- if enable_home %}
+        <partition>
+          <create config:type="boolean">true</create>
           <partition_type>primary</partition_type>
           <size>max</size>
-          <mount>/</mount>
+          <mount>/home</mount>
           <filesystem config:type="symbol">{{ default_fstype }}</filesystem>
           <format config:type="boolean">true</format>
         </partition>
@@ -272,6 +377,18 @@
     </proposal>
   </storage>
   {%- endif %}
+
+  <!-- Software Selection -->
+  <software>
+    <install_recommended t="boolean">true</install_recommended>
+    <packages t="list">
+      <package>iputils</package>
+      <package>sudo</package>
+    </packages>
+    <products config:type="list">
+      <product>SLES</product>
+    </products>
+  </software>
 
   <!-- Networking Configuration -->
   <networking>
@@ -433,42 +550,42 @@
         </interface>
       {%- endfor %}
 
-      {%- for interface in interface_vlan %}  
-        <interface t="map">
-          <bootproto>static</bootproto>
+    {%- for interface in interface_vlan %}  
+      <interface t="map">
+        <bootproto>static</bootproto>
           {%- if interface.links[0].interfaceType == "physical" %}
             {%- for physical_interface in interface_physical %}
               {%- if physical_interface.typeInterfaceId == interface.links[0].id %}
-          <etherdevice>{{construct_interface_name(physical_interface)}}</etherdevice>
+        <etherdevice>{{construct_interface_name(physical_interface)}}</etherdevice>
               {%- endif %}
             {%- endfor %}
           {%- elif interface.links[0].interfaceType == "bond" %}
             {%- for bond_interface in interface_bond %}
               {%- if bond_interface.typeInterfaceId == interface.links[0].id %}
-          <etherdevice>{{construct_interface_name(bond_interface)}}</etherdevice>
+        <etherdevice>{{construct_interface_name(bond_interface)}}</etherdevice>
               {%- endif %}
             {%- endfor %}
           {%- endif %}
-          <name>vlan{{interface.vlanId}}</name>
+        <name>vlan{{interface.vlanId}}</name>
           {%- if interface.ipv4Addresses | length > 0 %} 
             <ipaddr>{{interface.ipv4Addresses[0].cidr}}</ipaddr>
             {%- if interface.ipv6Addresses | length > 0 %}
-              <aliases>
-                <alias0>
-                  <IPADDR>{{interface.ipv6Addresses[0].cidr}}</IPADDR>
-                </alias0>
-              </aliases>
-            {%- endif %}
+            <aliases>
+              <alias0>
+                <IPADDR>{{interface.ipv6Addresses[0].cidr}}</IPADDR>
+              </alias0>
+            </aliases>
+          {%- endif %}
           {%- elif interface.ipv6Addresses | length > 0 %}
             <ipaddr>{{interface.ipv6Addresses[0].cidr}}</ipaddr>
-          {%- endif %}
+        {%- endif %}
           {%- if interface.mtu %}
             <mtu>{{interface.mtu}}</mtu>
           {%- endif %}
-          <startmode>auto</startmode>
-          <vlan_id>{{interface.vlanId}}</vlan_id>
-        </interface>
-      {%- endfor %}
+        <startmode>auto</startmode>
+        <vlan_id>{{interface.vlanId}}</vlan_id>
+      </interface>
+    {%- endfor %}
     </interfaces>
 
     <ipv6 config:type="boolean">true</ipv6>
