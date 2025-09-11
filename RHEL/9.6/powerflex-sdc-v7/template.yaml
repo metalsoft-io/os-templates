@@ -1,0 +1,78 @@
+template:
+  name: RHEL 9.6
+  label: rhel-9-6
+  description: RHEL 9.6
+  visibility: public
+  device:
+    architecture: x86_64
+    bootmode: hybrid
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: "oob"
+    readymethod: "wait_for_power_off"
+  os:
+    credential:
+      password: "redhatrocks!"
+      passwordtype: "plain"
+      username: "redhat"
+    name: "Rhel"
+    sshport: 22
+    version: "9.6"
+  tags:
+    - "rhel"
+templateassets:
+  - 
+    file:
+      mimetype: "text/plain"
+      name: "ks.cfg"
+      path: "/ks.cfg"
+      templatingengine: true
+    usage: "build_component"
+  - 
+    file:
+      mimetype: "text/plain"
+      name: "grub.cfg"
+      path: "/EFI/BOOT/grub.cfg"
+      templatingengine: true
+    usage: "build_component"
+  - 
+    file:
+      mimetype: "text/plain"
+      name: "grub.conf"
+      path: "/isolinux/grub.conf"
+      templatingengine: true
+    usage: "build_component"
+  - 
+    file:
+      mimetype: "text/plain"
+      name: "isolinux.cfg"
+      path: "/isolinux/isolinux.cfg"
+      templatingengine: true
+    usage: "build_component"
+  - 
+    file:
+      mimetype: "application/octet-stream"
+      name: "EMC-ScaleIO-sdc-4.5-4000.111.el9.x86_64.rpm"
+      path: "/EMC-ScaleIO-sdc-4.5-4000.111.el9.x86_64.rpm"
+      templatingengine: false
+      url: "https://repo.metalsoft.io/.powerflex/rhel/PowerFlex_4.5.4000.111_RHEL_OEL9_SDC/EMC-ScaleIO-sdc-4.5-4000.111.el9.x86_64.rpm"
+    usage: "build_component"
+  - 
+    file:
+      mimetype: "application/octet-stream"
+      name: "scini-5.14.0-570.12.1.el9_6.x86_64.ko"
+      path: "/scini-5.14.0-570.12.1.el9_6.x86_64.ko"
+      templatingengine: false
+      url: "https://repo.metalsoft.io/.powerflex/rhel/PowerFlex_4.5.4000.111_RHEL_OEL9_SDC/scini-5.14.0-570.12.1.el9_6.x86_64.ko"
+    usage: "build_component"
+  - 
+    file:
+      mimetype: "application/octet-stream"
+      name: "rhel-9.6-x86_64-dvd.iso"
+      path: "/rhel-9.6-x86_64-dvd.iso"
+      templatingengine: false
+      url: "http://repo.metalsoft.io/.iso/rhel/rhel-9.6-x86_64-dvd.iso"
+    usage: "build_source_image"
