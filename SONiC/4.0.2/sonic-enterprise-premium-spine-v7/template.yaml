@@ -19,7 +19,7 @@ template:
     sshport: 22
     credential:
       username: admin
-      passwordtype: generatedplain
+      passwordtype: generated
 templateassets:
   - file:
       name: Enterprise_SONiC_OS_4.0.2_Enterprise_Premium.bin
