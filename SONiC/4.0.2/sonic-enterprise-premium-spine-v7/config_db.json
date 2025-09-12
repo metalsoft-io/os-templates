@@ -1,0 +1,104 @@
+{
+    "MGMT_INTERFACE": {
+      "eth0|{{management_interface_ip_0_address}}/{{management_interface_ip_0_prefix_size}}": {
+        "gwaddr": "{{management_interface_ip_0_gateway}}"
+      }
+    },
+    "DEVICE_METADATA": {
+      "localhost": {
+        "hostname": "{{hostname}}"
+      }
+    },
+    "PORT": {
+      "Ethernet0": {
+        "index": "1",
+        "lanes": "29",
+        "alias": "Eth1/1",
+        "admin_status": "up"
+      },
+      "Ethernet1": {
+        "index": "2",
+        "lanes": "30",
+        "alias": "Eth1/2",
+        "admin_status": "up"
+      },
+      "Ethernet2": {
+        "index": "3",
+        "lanes": "31",
+        "alias": "Eth1/3",
+        "admin_status": "up"
+      },
+      "Ethernet3": {
+        "index": "4",
+        "lanes": "32",
+        "alias": "Eth1/4",
+        "admin_status": "up"
+      },
+      "Ethernet4": {
+        "index": "5",
+        "lanes": "33",
+        "alias": "Eth1/5",
+        "admin_status": "up"
+      },
+      "Ethernet5": {
+        "index": "6",
+        "lanes": "34",
+        "alias": "Eth1/6",
+        "admin_status": "up"
+      },
+      "Ethernet6": {
+        "index": "7",
+        "lanes": "35",
+        "alias": "Eth1/7",
+        "admin_status": "up"
+      },
+      "Ethernet7": {
+        "index": "8",
+        "lanes": "36",
+        "alias": "Eth1/8",
+        "admin_status": "up"
+      },
+      "Ethernet8": {
+        "index": "9",
+        "lanes": "37",
+        "alias": "Eth1/9",
+        "admin_status": "up"
+      },
+      "Ethernet9": {
+        "index": "10",
+        "lanes": "38",
+        "alias": "Eth1/10",
+        "admin_status": "up"
+      },
+      "Ethernet10": {
+        "index": "11",
+        "lanes": "39",
+        "alias": "Eth1/11",
+        "admin_status": "up"
+      },
+      "Ethernet11": {
+        "index": "12",
+        "lanes": "40",
+        "alias": "Eth1/12",
+        "admin_status": "up"
+      },
+      "Ethernet12": {
+        "index": "13",
+        "lanes": "41,42,43,44",
+        "alias": "Eth1/13",
+        "admin_status": "up"
+      },
+      "Ethernet16": {
+        "index": "14",
+        "lanes": "45,46,47,48",
+        "alias": "Eth1/14",
+        "admin_status": "up"
+      },
+      "Ethernet20": {
+        "index": "15",
+        "lanes": "49,50,51,52",
+        "alias": "Eth1/15",
+        "admin_status": "up"
+      }
+    }
+}

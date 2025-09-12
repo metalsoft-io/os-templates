@@ -1,0 +1,42 @@
+template:
+  name: SONiC Enterprise Standard
+  label: sonic_enterprise_standard
+  description: SONiC Enterprise Standard
+  visibility: private
+  device:
+    type: network_device
+    architecture: x86_64
+    bootmode: uefi
+  imagebuild:
+    required: false
+  install:
+    drivetype: local_drive
+    method: onie
+    readymethod: wait_for_ssh
+  os:
+    name: sonic_enterprise
+    version: 4.0.2
+    sshport: 22
+    credential:
+      username: admin
+      passwordtype: generatedplain
+templateassets:
+  - file:
+      name: Enterprise_SONiC_OS_4.0.2_vs_Standard.bin
+      path: /Enterprise_SONiC_OS_4.0.2_vs_Standard.bin
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/_internal/SONiC/4.0.2/Enterprise_SONiC_OS_4.0.2_vs_Standard.bin
+      templatingengine: false
+    usage: source_image
+  - file:
+      name: ztp.json
+      path: /ztp.json
+      mimetype: text/plain
+      templatingengine: true
+    usage: switch_ztp_config
+  - file:
+      name: config_db.json
+      path: /config_db.json
+      mimetype: text/plain
+      templatingengine: true
+    usage: generic
