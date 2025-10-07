@@ -12,7 +12,7 @@ template:
   install:
     drivetype: local_drive
     method: "oob"
-    readymethod: "wait_for_power_off"
+    readymethod: "wait_for_ssh"
   os:
     credential:
       password: "P@ssword123!"
