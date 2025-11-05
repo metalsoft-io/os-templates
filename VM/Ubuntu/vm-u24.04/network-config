@@ -1,0 +1,74 @@
+#cloud-config
+{% if network_configuration %}
+  network:
+    version: 2
+    renderer: networkd
+    {%- set interface_physical = [] %}
+    {%- for interface in network_configuration.interfaces %}
+      {%- if interface.interface_type == 'physical' %}
+        {%- set interface_physical = (interface_physical.push(interface), interface_physical) %}
+      {%- endif %}
+    {%- endfor %}
+    {%- if interface_physical | length %}
+    ethernets:
+      {%- for interface in interface_physical %}
+      ms.{{ interface.network_type }}.{{ interface.vlan_id }}:
+        {%- if interface.dhcp4 %}
+        dhcp4: {{ interface.dhcp4 }}
+        {%- endif %}
+        {%- if interface.dhcp6 %}
+        dhcp6: {{ interface.dhcp6 }}
+        {%- endif %}
+        {%- if interface.optional %}
+        optional: {{ interface.optional }}
+        {%- endif %}
+        {%- if interface.critical %}
+        critical: {{ interface.critical }}
+        {%- endif %}
+        {%- if interface.mtu %}
+        mtu: {{ interface.mtu }}
+        {% endif -%}
+        {%- if (interface.ipv4_addresses | length) or (interface.ipv6_addresses | length) %}
+        addresses:
+        {%- for ipv4_address in interface.ipv4_addresses %}
+        - {{ ipv4_address.cidr }}
+        {% endfor -%}
+        {%- for ipv6_address in interface.ipv6_addresses %}
+        - {{ ipv6_address.cidr }}
+        {% endfor -%}
+        {% endif %}
+        match:
+          macaddress: {{ interface.mac_address }}
+        set-name: ms.{{ interface.network_type }}.{{ interface.vlan_id }}
+        {%- if interface.routes | length %}
+        routes:
+        {%- for route in interface.routes %}
+        - to: {{ route.to }}
+          via: {{ route.via }}
+          {%- if route.metric %}
+          metric: {{ route.metric }}
+          {% endif -%}
+          {%- if route.on_link %}
+          on-link: {{ route.on_link }}
+          {%- endif %}
+          {%- if route.table %}
+          table: {{ route.table }}
+          {% endif -%}
+        {% endfor -%}
+        {% endif -%}
+        {%- if interface.dns_nameservers.addresses | length %}
+        nameservers:
+          addresses:
+          {% for addr in interface.dns_nameservers.addresses -%}
+          - {{ addr }}
+          {% endfor -%}
+          {%- if interface.dns_nameservers.search_domains | length %}
+          search:
+          {% for domain in interface.dns_nameservers.search_domains -%}
+          - {{ domain }}
+          {% endfor -%}
+          {% endif -%}
+        {% endif -%}
+      {% endfor -%}
+    {% endif -%}
+{%- endif %}

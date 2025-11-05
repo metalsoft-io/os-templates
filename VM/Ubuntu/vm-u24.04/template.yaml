@@ -1,0 +1,47 @@
+template:
+  name: VM Ubuntu 24.04
+  label: vm-ubuntu-24-04
+  description: VM Ubuntu 24.04
+  visibility: public
+  device:
+      type: vm
+      bootmode: uefi
+      architecture: x86_64
+  install:
+      method: ds_lxd
+      drivetype: local_drive
+      readymethod: wait_for_api_response
+  os:
+      name: Ubuntu
+      version: "24.04"
+      credential:
+          username: root
+          passwordtype: generated
+      sshport: 22
+  tags:
+    - ubuntu
+templateassets:
+  - file:
+      name: source
+      path: /source
+      mimetype: text/plain
+      templatingengine: true
+    usage: metadata_source_image
+  - file:
+      name: user-data
+      path: /user-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: generic
+  - file:
+      name: vendor-data
+      path: /vendor-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: generic
+  - file:
+      name: network-config
+      path: /network-config
+      mimetype: text/plain
+      templatingengine: true
+    usage: generic

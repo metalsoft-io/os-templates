@@ -1,0 +1,6 @@
+{
+	"server": "https://images.linuxcontainers.org",
+	"alias": "ubuntu/24.04/cloud",
+	"protocol": "simplestreams",
+	"mode": "pull"
+}
