@@ -1,0 +1,149 @@
+{% if network and network.interfaces and network.interfaces | length %}
+network:
+  version: 2
+  renderer: networkd
+  {%- set interfacePhysical = [] %}
+  {%- set interfaceBond = [] %}
+  {%- set interfaceVlan = [] %}
+  {%- for interface in network.interfaces %}
+    {%- if interface.interfaceType == 'physical' %}
+      {%- set interfacePhysical = (interfacePhysical.push(interface), interfacePhysical) %}
+    {%- elseif interface.interfaceType == 'bond' %}
+      {%- set interfaceBond = (interfaceBond.push(interface), interfaceBond) %}
+    {%- elseif interface.interfaceType == 'vlan' %}
+      {%- set interfaceVlan = (interfaceVlan.push(interface), interfaceVlan) %}
+    {%- endif %}
+  {%- endfor %}
+  {%- if interfacePhysical | length %}
+  ethernets:
+    {%- for interface in interfacePhysical %}
+    {% if interface.interfaceType == 'physical' %}phy{% endif %}{{ interface.typeInterfaceId }}:
+      {%- if interface.dhcp4 %}
+      dhcp4: {{ interface.dhcp4 }}
+      {%- endif %}
+      {%- if interface.dhcp6 %}
+      dhcp6: {{ interface.dhcp6 }}
+      {%- endif %}
+      {%- if interface.optional %}
+      optional: {{ interface.optional }}
+      {%- endif %}
+      {%- if interface.critical %}
+      critical: {{ interface.critical }}
+      {%- endif %}
+      {%- if interface.mtu %}
+      mtu: {{ interface.mtu }}
+      {% endif -%}
+      {%- if (interface.ipv4Addresses | length) or (interface.ipv6Addresses | length) %}
+      addresses:
+      {%- for ipv4_address in interface.ipv4Addresses %}
+      - {{ ipv4_address.cidr }}
+      {% endfor -%}
+      {%- for ipv6_address in interface.ipv6Addresses %}
+      - {{ ipv6_address.cidr }}
+      {% endfor -%}
+      {% endif %}
+      match:
+        macaddress: {{ interface.macAddress }}
+      set-name: {% if interface.interfaceType == 'physical' %}phy{% endif %}{{ interface.typeInterfaceId }}
+      {%- if interface.routes | length %}
+      routes:
+      {%- for route in interface.routes %}
+      - to: {{ route.to }}
+        via: {{ route.via }}
+        {%- if route.metric %}
+        metric: {{ route.metric }}
+        {% endif -%}
+      {% endfor -%}
+      {% endif -%}
+    {% endfor -%}
+  {% endif -%}
+  {%- if interfaceBond | length %}
+  bonds:
+    {%- for interface in interfaceBond %}
+    {{ interface.interfaceType }}{{ interface.typeInterfaceId }}:
+      interfaces:
+      {%- for member in interface.members %}
+      - {% if member.interfaceType == 'physical' %}phy{% endif %}{{ member.id }}
+      {%- endfor %}
+      {%- if interface.parameters %}
+      parameters:
+        mode: {{ interface.parameters.mode }}
+        {%- if (interface.parameters.lacpRate and interface.parameters.mode == '802.3ad') %}
+        lacp-rate: {{ interface.parameters.lacpRate }}
+        {%- endif %}
+        {%- if interface.parameters.transmitHashPolicy and (interface.parameters.mode == '802.3ad') or (interface.parameters.mode == 'balance-xor') or (interface.parameters.mode == 'balance-tlb') %}
+        transmit-hash-policy: {{ interface.parameters.transmitHashPolicy }}
+        {%- endif %}
+        {%- if interface.parameters.miiMonitorInterval %}
+        mii-monitor-interval: {{ interface.parameters.miiMonitorInterval }}
+        {%- endif %}
+      {%- else %}
+      parameters:
+        mode: 802.3ad
+        lacp-rate: fast
+        transmit-hash-policy: layer3+4
+        mii-monitor-interval: 100
+      {%- endif %}
+      {%- if interface.mtu %}
+      mtu: {{ interface.mtu }}
+      {%- endif %}
+      {%- if (interface.ipv4Addresses | length) or (interface.ipv6Addresses | length) %}
+      addresses:
+      {%- for ipv4_address in interface.ipv4Addresses %}
+      - {{ ipv4_address.cidr }}
+      {%- endfor %}
+      {%- for ipv6_address in interface.ipv6Addresses %}
+      - {{ ipv6_address.cidr }}
+      {%- endfor %}
+      {%- elseif interface.dhcp4 == true %}
+      dhcp4: true
+      {%- endif %}
+      {%- if interface.routes | length %}
+      routes:
+      {%- for route in interface.routes %}
+      - to: {{ route.to }}
+        via: {{ route.via }}
+        {%- if route.metric %}
+        metric: {{ route.metric }}
+        {%- endif %}
+      {%- endfor %}
+      {%- endif %}
+    {%- endfor %}
+    {%- endif %}
+  {%- if interfaceVlan | length %}
+  vlans:
+    {%- for interface in interfaceVlan %}
+    {{ interface.interfaceType }}{{ interface.vlanId }}:
+      id: {{ interface.vlanId }}
+      {%- if interface.links and interface.links | length %}
+      {% for link in interface.links %}
+      link: {% if link.interfaceType == 'physical' %}phy{% elif link.interfaceType == 'bond' %}bond{% endif %}{{ link.id }}
+      {%- endfor %}
+      {%- endif%}
+      {%- if interface.mtu %}
+      mtu: {{ interface.mtu }}
+      {%- endif %}
+      {%- if (interface.ipv4Addresses | length) or (interface.ipv6Addresses | length) %}
+      addresses:
+      {%- for ipv4_address in interface.ipv4Addresses %}
+      - {{ ipv4_address.cidr }}
+      {%- endfor %}
+      {%- for ipv6_address in interface.ipv6Addresses %}
+      - {{ ipv6_address.cidr }}
+      {%- endfor %}
+      {%- elseif interface.dhcp4 == true %}
+      dhcp4: true
+      {%- endif %}
+      {%- if interface.routes | length %}
+      routes:
+      {%- for route in interface.routes %}
+      - to: {{ route.to }}
+        via: {{ route.via }}
+        {%- if route.metric %}
+        metric: {{ route.metric }}
+        {%- endif %}
+      {%- endfor %}
+      {%- endif %}
+    {%- endfor %}
+  {%- endif %}
+{%- endif %}
