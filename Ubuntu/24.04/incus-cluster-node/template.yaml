@@ -1,0 +1,60 @@
+template:
+  name: Incus Cluster Node - Ubuntu 24.04 LTS
+  label: incus-ubuntu-24-04-cluster-node
+  description: Ubuntu 24.04 LTS - Cloud Init based template for Incus
+  visibility: private
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: oob
+    readymethod: wait_for_ssh
+  os:
+    name: Ubuntu
+    version: 24.04.3
+    credential:
+      username: ubuntu
+      passwordtype: generated
+    sshPort: 22
+templateassets:
+  - file:
+      name: grub.cfg
+      path: /boot/grub/grub.cfg
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: meta-data
+      path: /meta-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: ubuntu-24.04.3-live-server-amd64.iso
+      path: /ubuntu-24.04.3-live-server-amd64.iso
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/ubuntu/ubuntu-24.04.3-live-server-amd64.iso
+      templatingengine: false
+    usage: build_source_image
+  - file:
+      name: user-data
+      path: /user-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: vendor-data
+      path: /vendor-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: 01-netcfg.yaml
+      path: /01-netcfg.yaml
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
