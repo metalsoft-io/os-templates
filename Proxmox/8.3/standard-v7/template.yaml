@@ -1,0 +1,43 @@
+template:
+  name: Proxmox 8.3
+  label: proxmox-8-3
+  description: Proxmox 8.3
+  visibility: public
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: oob
+    readymethod: wait_for_power_off
+  os:
+    name: Proxmox
+    version: 8.3
+    credential:
+      username: root
+      password: ProxmoxRocks!
+      passwordtype: plain
+  tags:
+    - proxmox
+templateassets:
+  - file:
+      name: answer.toml
+      path: /answer.toml
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: auto-installer-mode.toml
+      path: /auto-installer-mode.toml
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: proxmox-first-boot
+      path: /proxmox-first-boot
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
