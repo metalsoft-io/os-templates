@@ -41,3 +41,10 @@ templateassets:
       mimetype: text/plain
       templatingengine: true
     usage: build_component
+  - file:
+      mimetype: "application/octet-stream"
+      name: "proxmox-ve_8.3-1.iso"
+      path: "/proxmox-ve_8.3-1.iso"
+      templatingengine: false
+      url: "http://repo.metalsoft.io/.iso/proxmox/proxmox-ve_8.3-1.iso"
+    usage: build_source_image  
