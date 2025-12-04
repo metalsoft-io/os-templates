@@ -56,15 +56,15 @@
           {% endif -%}
         {% endfor -%}
         {% endif -%}
-        {%- if interface.dns_nameservers.addresses | length %}
+        {%- if siteConfig.DNSServers | length %}
         nameservers:
           addresses:
-          {% for addr in interface.dns_nameservers.addresses -%}
+          {% for addr in siteConfig.DNSServers -%}
           - {{ addr }}
           {% endfor -%}
-          {%- if interface.dns_nameservers.search_domains | length %}
+          {%- if interface.dnsNameservers.searchDomains | length %}
           search:
-          {% for domain in interface.dns_nameservers.search_domains -%}
+          {% for domain in interface.dnsNameservers.searchDomains -%}
           - {{ domain }}
           {% endfor -%}
           {% endif -%}
