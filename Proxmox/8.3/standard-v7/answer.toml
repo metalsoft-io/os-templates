@@ -1,7 +1,12 @@
 [global]
 keyboard = "en-us"
 country = "us"
-fqdn = "{{serverInstance.label}}"
+{%- if serverInstance and serverInstance.fqdn %}
+  fqdn = "{{serverInstance.fqdn}}"
+{%- else %}
+  fqdn = "{{serverInstance.label}}.domain"
+{%- endif %}
+
 mailto = "mail@no.invalid"
 timezone = "America/Chicago"
 root_password = "{{serverInstance.osCredentials.initialPasswordEncrypted}}"
@@ -23,7 +28,9 @@ source = "from-answer"
   {%- endif %}
 {%- endfor %}
 {%- endif %}
+{%- set interface_configured = false %}
 {%- for interface in interface_physical %}
+  {%- if not interface_configured %}
   {%- set is_bond_slave = false %}
   {%- for bond in interface_bond %}
     {%- if bond.members %}
@@ -35,27 +42,33 @@ source = "from-answer"
     {%- endif %}
   {%- endfor %}        
   {%- if is_bond_slave %}             
-  {%- elif interface.ipv4Addresses | length > 0 %}
+  {%- else %}
   
-cidr="{{interface.ipv4Addresses[0].cidr}}"
-{%- if interface.routes and interface.routes[0].via %}
+{%- if interface.ipv4Addresses | length > 0 %}
+cidr="{{interface.ipv4Addresses[0].cidr | default('192.168.1.100/24')}}"
+{%- if interface.routes and interface.routes | length > 0 and interface.routes[0].via %}
 gateway="{{interface.routes[0].via}}"
 {%- endif %}
-filter.ID_NET_NAME_MAC = "*{{ interface.macAddress | replace(":", "") | lower }}"
-
-  {%- elif interface.ipv6Addresses | length > 0 %}
-
+{%- elif interface.ipv6Addresses | length > 0 %}
 cidr="{{interface.ipv6Addresses[0].cidr}}"
 {%- if interface.ipv6Addresses[0].gateway %}
 gateway="{{interface.ipv6Addresses[0].gateway}}"
 {%- endif %}
+{%- else %}
+cidr="192.168.1.100/24"
+{%- endif %}
 filter.ID_NET_NAME_MAC = "*{{ interface.macAddress | replace(":", "") | lower }}"
+{%- set interface_configured = true %}
 
-  {%- else %}
+  {%- endif %}
   {%- endif %}
 {%- endfor %}
 
+{%- if siteConfig and siteConfig.DNSServers and siteConfig.DNSServers | length > 0 %}
 dns = "{{siteConfig.DNSServers[0]}}"
+{%- else %}
+dns = "8.8.8.8"
+{%- endif %}
 
 [disk-setup]
 filesystem = "ext4"
