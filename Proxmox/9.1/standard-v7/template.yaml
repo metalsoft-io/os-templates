@@ -1,0 +1,50 @@
+template:
+  name: Proxmox 9.1
+  label: proxmox-9-1
+  description: Proxmox 9.1
+  visibility: public
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: oob
+    readymethod: wait_for_power_off
+  os:
+    name: Proxmox
+    version: 9.1
+    credential:
+      username: root
+      password: ProxmoxRocks!
+      passwordtype: plain
+  tags:
+    - proxmox
+templateassets:
+  - file:
+      name: answer.toml
+      path: /answer.toml
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: auto-installer-mode.toml
+      path: /auto-installer-mode.toml
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: proxmox-first-boot
+      path: /proxmox-first-boot
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      mimetype: "application/octet-stream"
+      name: "proxmox-ve_9.1-1.iso"
+      path: "/proxmox-ve_9.1-1.iso"
+      templatingengine: false
+      url: "http://repo.metalsoft.io/.iso/proxmox/proxmox-ve_9.1-1.iso"
+    usage: build_source_image  
