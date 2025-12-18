@@ -1,3 +1,4 @@
+#cloud-config
 {% if network and network.interfaces and network.interfaces | length %}
 network:
   version: 2
