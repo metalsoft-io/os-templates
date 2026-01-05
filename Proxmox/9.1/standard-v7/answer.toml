@@ -12,7 +12,13 @@ country = "us"
 
 mailto = "mail@no.invalid"
 timezone = "America/Chicago"
+{% if serverInstance and serverInstance.osCredentials -%}
+{%- if serverInstance.osCredentials.initialPasswordEncrypted %}
 root_password = "{{serverInstance.osCredentials.initialPasswordEncrypted}}"
+{%- else %}
+root_password = "ProxmoxRocks!"
+{%- endif %}
+{%- endif %}
 
 [network]
 source = "from-answer"
@@ -29,7 +35,7 @@ source = "from-answer"
 {%- for interface in interface_physical %}
   {%- if not interface_configured %}
     {%- if interface.ipv4Addresses | length > 0 %}
-  
+
 cidr="{{interface.ipv4Addresses[0].cidr | default('192.168.1.100/24')}}"
       {%- if interface.routes and interface.routes | length > 0 and interface.routes[0].via %}
 gateway="{{interface.routes[0].via}}"
@@ -72,4 +78,3 @@ disk_list = ['sda']
 [first-boot]
 source = "from-iso"
 ordering = "before-network"
-
