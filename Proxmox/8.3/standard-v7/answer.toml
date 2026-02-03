@@ -40,10 +40,10 @@ source = "from-answer"
         {%- endif %}
       {%- endfor %}
     {%- endif %}
-  {%- endfor %}        
-  {%- if is_bond_slave %}             
+  {%- endfor %}
+  {%- if is_bond_slave %}
   {%- else %}
-  
+
 {%- if interface.ipv4Addresses | length > 0 %}
 cidr="{{interface.ipv4Addresses[0].cidr | default('192.168.1.100/24')}}"
 {%- if interface.routes and interface.routes | length > 0 and interface.routes[0].via %}
@@ -63,6 +63,9 @@ filter.ID_NET_NAME_MAC = "*{{ interface.macAddress | replace(":", "") | lower }}
   {%- endif %}
   {%- endif %}
 {%- endfor %}
+{%- if not interface_configured %}
+cidr="192.168.1.100/24"
+{%- endif %}
 
 {%- if siteConfig and siteConfig.DNSServers and siteConfig.DNSServers | length > 0 %}
 dns = "{{siteConfig.DNSServers[0]}}"

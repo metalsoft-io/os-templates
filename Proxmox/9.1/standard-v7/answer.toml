@@ -62,6 +62,11 @@ filter.ID_NET_NAME_MAC = "*{{ interface.macAddress | replace(":", "") | lower }}
     {%- endif %}
   {%- endif %}
 {%- endfor %}
+{%- if not interface_configured %}
+cidr="192.168.1.100/24"
+gateway="192.168.1.1"
+filter.ID_NET_NAME_MAC = "*{{ interface.macAddress | replace(":", "") | lower }}"
+{%- endif %}
 
 {%- if siteConfig and siteConfig.DNSServers and siteConfig.DNSServers | length > 0 %}
 dns = "{{siteConfig.DNSServers[0]}}"
