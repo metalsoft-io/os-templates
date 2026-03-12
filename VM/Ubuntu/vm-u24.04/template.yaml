@@ -4,20 +4,20 @@ template:
   description: VM Ubuntu 24.04
   visibility: public
   device:
-      type: vm
-      bootmode: uefi
-      architecture: x86_64
+    type: vm
+    bootmode: uefi
+    architecture: x86_64
   install:
-      method: ds_lxd
-      drivetype: local_drive
-      readymethod: wait_for_api_response
+    method: ds_lxd
+    drivetype: local_drive
+    readymethod: wait_for_api_response
   os:
-      name: Ubuntu
-      version: "24.04"
-      credential:
-          username: root
-          passwordtype: generated
-      sshport: 22
+    name: Ubuntu
+    version: "24.04"
+    credential:
+      username: ubuntu
+      passwordtype: generated
+    sshport: 22
   tags:
     - ubuntu
 templateassets:

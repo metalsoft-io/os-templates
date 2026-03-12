@@ -47,14 +47,26 @@ ssh:
     {%- endif %}
 # = Set Passwords =
 ssh_pwauth: true
+{% if serverInstance and serverInstance.osCredentials -%}
+{%- if serverInstance.osCredentials.initialPasswordEncrypted %}
+password: {{ serverInstance.osCredentials.initialPasswordEncrypted }}
+{%- else %}
 password: Setup00!
+{%- endif %}
+{%- endif %}
 chpasswd: { expire: false }
 # = Users and Groups =
 users:
   - default
   - name: root
     lock_passwd: false
-    plain_text_passwd: Setup00!
+    {% if serverInstance and serverInstance.osCredentials -%}
+    {%- if serverInstance.osCredentials.initialPasswordEncrypted %}
+    password: {{ serverInstance.osCredentials.initialPasswordEncrypted }}
+    {%- else %}
+    password: Setup00!
+    {%- endif %}
+    {%- endif %}
     {% if managementSSHKey or (userSSHKeys and (userSSHKeys | length)) -%}
     ssh_authorized_keys:
     {%- if userSSHKeys and (userSSHKeys | length) %}

@@ -1,18 +1,18 @@
 #cloud-config
-{% if network_configuration %}
+{% if network and network.interfaces and network.interfaces | length %}
   network:
     version: 2
     renderer: networkd
-    {%- set interface_physical = [] %}
-    {%- for interface in network_configuration.interfaces %}
-      {%- if interface.interface_type == 'physical' %}
-        {%- set interface_physical = (interface_physical.push(interface), interface_physical) %}
+    {%- set interfacephysical = [] %}
+    {%- for interface in network.interfaces %}
+      {%- if interface.interfaceType == 'physical' %}
+        {%- set interfacephysical = (interfacephysical.push(interface), interfacephysical) %}
       {%- endif %}
     {%- endfor %}
-    {%- if interface_physical | length %}
+    {%- if interfacephysical | length %}
     ethernets:
-      {%- for interface in interface_physical %}
-      ms.{{ interface.network_type }}.{{ interface.vlan_id }}:
+      {%- for interface in interfacephysical %}
+      phy{{ interface.typeInterfaceId }}:
         {%- if interface.dhcp4 %}
         dhcp4: {{ interface.dhcp4 }}
         {%- endif %}
@@ -28,18 +28,18 @@
         {%- if interface.mtu %}
         mtu: {{ interface.mtu }}
         {% endif -%}
-        {%- if (interface.ipv4_addresses | length) or (interface.ipv6_addresses | length) %}
+        {%- if (interface.ipv4Addresses | length) or (interface.ipv6Addresses | length) %}
         addresses:
-        {%- for ipv4_address in interface.ipv4_addresses %}
+        {%- for ipv4_address in interface.ipv4Addresses %}
         - {{ ipv4_address.cidr }}
         {% endfor -%}
-        {%- for ipv6_address in interface.ipv6_addresses %}
+        {%- for ipv6_address in interface.ipv6Addresses %}
         - {{ ipv6_address.cidr }}
         {% endfor -%}
         {% endif %}
         match:
-          macaddress: {{ interface.mac_address }}
-        set-name: ms.{{ interface.network_type }}.{{ interface.vlan_id }}
+          macaddress: {{ interface.macAddress }}
+        set-name: phy{{ interface.typeInterfaceId }}
         {%- if interface.routes | length %}
         routes:
         {%- for route in interface.routes %}
