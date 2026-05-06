@@ -1,4 +1,4 @@
-# os-templates-gitlab
+MetalSoft Operating System Templates
 
 A repository that holds OS templates to be used in the metalcloud-cli os-template build command
 
