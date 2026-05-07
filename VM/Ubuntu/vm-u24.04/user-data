@@ -33,6 +33,8 @@ hostname: test
 manage_etc_hosts: true
 ssh:
   install-server: true
+  # = Keys to Console =
+  emit_keys_to_console: true
   allow-pw: true
   {% if managementSSHKey or (userSSHKeys and (userSSHKeys | length)) -%}
   authorized_keys:
@@ -91,9 +93,6 @@ allow_public_ssh_keys: true
 # SSH Authkey Fingerprints
 no_ssh_fingerprints: true
 authkey_hash: sha256
-# = Keys to Console =
-ssh:
-  emit_keys_to_console: true
 # = Package Update Upgrade Install =
 package_update: false
 package_upgrade: false
