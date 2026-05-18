@@ -43,6 +43,13 @@ network:
       - {{ ipv6_address.cidr }}
       {% endfor -%}
       {% endif %}
+      {%- if (interface.ipv4Addresses | length) and (siteConfig and siteConfig.DNSServers | length) %}
+      nameservers:
+        addresses:
+        {%- for dns in siteConfig.DNSServers %}
+        - {{ dns }}
+        {%- endfor %}
+      {%- endif %}
       match:
         macaddress: {{ interface.macAddress }}
       set-name: {% if interface.interfaceType == 'physical' %}phy{% endif %}{{ interface.typeInterfaceId }}
@@ -99,6 +106,13 @@ network:
       {%- elseif interface.dhcp4 == true %}
       dhcp4: true
       {%- endif %}
+      {%- if (interface.ipv4Addresses | length) and (siteConfig and siteConfig.DNSServers | length) %}
+      nameservers:
+        addresses:
+        {%- for dns in siteConfig.DNSServers %}
+        - {{ dns }}
+        {%- endfor %}
+      {%- endif %}
       {%- if interface.routes | length %}
       routes:
       {%- for route in interface.routes %}
@@ -134,6 +148,13 @@ network:
       {%- endfor %}
       {%- elseif interface.dhcp4 == true %}
       dhcp4: true
+      {%- endif %}
+      {%- if (interface.ipv4Addresses | length) and (siteConfig and siteConfig.DNSServers | length) %}
+      nameservers:
+        addresses:
+        {%- for dns in siteConfig.DNSServers %}
+        - {{ dns }}
+        {%- endfor %}
       {%- endif %}
       {%- if interface.routes | length %}
       routes:
