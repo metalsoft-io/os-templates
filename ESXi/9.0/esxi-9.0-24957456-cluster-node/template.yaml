@@ -1,0 +1,59 @@
+# VMware-VMvisor-Installer-9.0.1.0.24957456.x86_64.iso
+template:
+  name: VCF Cluster Node - 9.0.1-0.24957456
+  label: esxi-9-24957456-cluster-node
+  description: OS template for a VMware Cloud Foundation (VCF) 9.0.1 cluster node, based on ESXi 9.0.1.0.24957456
+  visibility: public
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: "oob"
+    readymethod: "wait_for_ssh"
+  os:
+    credential:
+      password: "P@ssword123!"
+      passwordtype: "plain"
+      username: "root"
+    name: "ESXi"
+    sshport: 22
+    version: "9.0.1-24957456"
+  tags:
+    - esxi-9-24957456-cluster-node
+    - vcf-cluster-node
+templateassets:
+  - file:
+      mimetype: "text/plain"
+      name: "BOOT.CFG"
+      path: "/BOOT.CFG"
+      templatingengine: true
+    usage: "build_component"
+  - file:
+      mimetype: "text/plain"
+      name: "EFI-BOOT.CFG"
+      path: "/EFI/BOOT/BOOT.CFG"
+      templatingengine: true
+    usage: "build_component"
+  - file:
+      mimetype: "text/plain"
+      name: "ISOLINUX.CFG"
+      path: "/ISOLINUX.CFG"
+      templatingengine: true
+    usage: "build_component"
+  - file:
+      mimetype: "text/plain"
+      name: "KS.CFG"
+      path: "/KS.CFG"
+      templatingengine: true
+    usage: "build_component"
+  - file:
+      mimetype: "application/octet-stream"
+      name: "VMware-VMvisor-Installer-9.0.1.0.24957456.x86_64.iso"
+      path: "/VMware-VMvisor-Installer-9.0.1.0.24957456.x86_64.iso"
+      templatingengine: false
+      url: "https://repo.metalsoft.io/.vmware/VMware-VMvisor-Installer-9.0.1.0.24957456.x86_64.iso"
+    usage: "build_source_image"

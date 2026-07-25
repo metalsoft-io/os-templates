@@ -1,6 +1,6 @@
 template:
   name: RHEL 9.6
-  label: rhel-9-6
+  label: rhel-9-6-pf
   description: RHEL 9.6
   visibility: public
   device:

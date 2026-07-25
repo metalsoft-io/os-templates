@@ -18,8 +18,7 @@ template:
     version: 9.1
     credential:
       username: root
-      password: ProxmoxRocks!
-      passwordtype: plain
+      passwordtype: generated
   tags:
     - proxmox
 templateassets:
@@ -47,4 +46,4 @@ templateassets:
       path: "/proxmox-ve_9.1-1.iso"
       templatingengine: false
       url: "http://repo.metalsoft.io/.iso/proxmox/proxmox-ve_9.1-1.iso"
-    usage: build_source_image  
+    usage: build_source_image

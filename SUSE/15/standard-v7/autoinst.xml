@@ -166,7 +166,7 @@
           <format config:type="boolean">true</format>
         </partition>
         {%- endif %}
-        
+
         {%- if enable_boot %}
         <partition>
           <create config:type="boolean">true</create>
@@ -391,6 +391,7 @@
   </software>
 
   <!-- Networking Configuration -->
+{% if network and network.interfaces and network.interfaces | length %}
   <networking>
 
     {%- set interface_physical = [] %}
@@ -471,7 +472,7 @@
       <resolv_conf_policy>auto</resolv_conf_policy>
     </dns>
     <net-udev config:type="list">
-       {%- for interface in interface_physical %} 
+       {%- for interface in interface_physical %}
         <rule>
           <name>{{construct_interface_name(interface)}}</name>
           <rule>ATTR{address}</rule>
@@ -479,7 +480,7 @@
         </rule>
       {%- endfor %}
     </net-udev>
-    
+
     <interfaces config:type="list">
 
       {%- for interface in interface_physical %}
@@ -496,7 +497,7 @@
             <bootproto>none</bootproto>
           {%- elif interface.ipv4Addresses | length > 0 %}
             <bootproto>static</bootproto>
-            <ipaddr>{{interface.ipv4Addresses[0].cidr}}</ipaddr>            
+            <ipaddr>{{interface.ipv4Addresses[0].cidr}}</ipaddr>
             {%- if interface.ipv6Addresses | length > 0 %}
             <aliases>
               <alias0>
@@ -516,7 +517,7 @@
           {%- endif %}
         </interface>
       {%- endfor %}
-      
+
       {%- for interface in interface_bond %}
         <interface>
           <name>{{construct_interface_name(interface)}}</name>
@@ -530,7 +531,7 @@
                 <IPADDR>{{interface.ipv6Addresses[0].cidr}}</IPADDR>
               </alias0>
             </aliases>
-            {%- endif %}  
+            {%- endif %}
           {%- elif interface.ipv6Addresses | length > 0 %}
             <bootproto>static</bootproto>
             <ipaddr>{{interface.ipv6Addresses[0].cidr}}</ipaddr>
@@ -550,7 +551,7 @@
         </interface>
       {%- endfor %}
 
-    {%- for interface in interface_vlan %}  
+    {%- for interface in interface_vlan %}
       <interface t="map">
         <bootproto>static</bootproto>
           {%- if interface.links[0].interfaceType == "physical" %}
@@ -567,7 +568,7 @@
             {%- endfor %}
           {%- endif %}
         <name>vlan{{interface.vlanId}}</name>
-          {%- if interface.ipv4Addresses | length > 0 %} 
+          {%- if interface.ipv4Addresses | length > 0 %}
             <ipaddr>{{interface.ipv4Addresses[0].cidr}}</ipaddr>
             {%- if interface.ipv6Addresses | length > 0 %}
             <aliases>
@@ -625,6 +626,7 @@
       </routes>
     </routing>
   </networking>
+{% endif %}
 
   <!-- User Settings -->
   <users config:type="list">
@@ -648,7 +650,7 @@
       </authorized_keys>
     </user>
     {%- endif %}
-    
+
     <!-- Root user configuration -->
     <user>
       <username>root</username>
