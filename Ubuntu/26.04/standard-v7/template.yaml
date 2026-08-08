@@ -1,0 +1,56 @@
+template:
+  name: Ubuntu 26.04 LTS
+  label: ubuntu-26-04-lts
+  description: Ubuntu 26.04 LTS
+  visibility: public
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: oob
+    readymethod: wait_for_power_off
+  os:
+    name: Ubuntu
+    version: 26.04
+    credential:
+      username: ubuntu
+      password: Setup00!
+      passwordtype: plain
+  tags:
+    - ubuntu
+templateassets:
+  - file:
+      name: grub.cfg
+      path: /boot/grub/grub.cfg
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: meta-data
+      path: /meta-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: ubuntu-26.04-live-server-amd64.iso
+      path: /ubuntu-26.04-live-server-amd64.iso
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/ubuntu/ubuntu-26.04-live-server-amd64.iso
+      templatingengine: false
+    usage: build_source_image
+  - file:
+      name: user-data
+      path: /user-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: vendor-data
+      path: /vendor-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
