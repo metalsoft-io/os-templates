@@ -54,3 +54,9 @@ templateassets:
       mimetype: text/plain
       templatingengine: true
     usage: build_component
+  - file:
+      name: 01-netcfg.yaml
+      path: /01-netcfg.yaml
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
