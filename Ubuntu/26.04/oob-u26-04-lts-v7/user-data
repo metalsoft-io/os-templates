@@ -80,6 +80,10 @@ autoinstall:
   # https://ubuntu.com/server/docs/install/autoinstall-reference#late-commands
   late-commands:
     - cp /cdrom/01-netcfg.yaml /target/etc/netplan/01-netcfg.yaml
+    - |
+      printf 'GRUB_CMDLINE_LINUX_DEFAULT="intel_iommu=on iommu=pt"\n' \
+        > /target/etc/default/grub.d/99-iommu.cfg
+    - curtin in-target -- update-grub
     - echo "Done"
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#error-commands
