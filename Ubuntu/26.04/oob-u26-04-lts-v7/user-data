@@ -79,6 +79,7 @@ autoinstall:
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#late-commands
   late-commands:
+    - cp /cdrom/01-netcfg.yaml /target/etc/netplan/01-netcfg.yaml
     - echo "Done"
 
   # https://ubuntu.com/server/docs/install/autoinstall-reference#error-commands
@@ -107,13 +108,28 @@ autoinstall:
     # = Set Hostname/Update Hostname =
     preserve_hostname: false
     prefer_fqdn_over_hostname: true
+    {%- if serverInstance and serverInstance.provisionInstanceDnsRecords %}
+    fqdn: {{ serverInstance.fqdn | default('test.local') }}
+    {%- if serverInstance.hostname %}
+    hostname: {{ serverInstance.hostname }}
+    {%- else %}
+    hostname: {{ serverInstance.label | default('test') }}
+    {%- endif %}
+    {% else %}
     fqdn: test.local
     hostname: test
+    {%- endif %}
     # = Update Etc Hosts =
     manage_etc_hosts: true
     # = Set Passwords =
     ssh_pwauth: true
+    {% if serverInstance and serverInstance.osCredentials -%}
+    {%- if serverInstance.osCredentials.initialPasswordEncrypted %}
+    password: {{ serverInstance.osCredentials.initialPasswordEncrypted }}
+    {%- else %}
     password: Setup00!
+    {%- endif %}
+    {%- endif %}
     chpasswd: { expire: false }
     # = Users and Groups =
     users:
