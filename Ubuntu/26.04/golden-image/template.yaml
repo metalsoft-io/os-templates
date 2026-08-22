@@ -1,0 +1,57 @@
+template:
+  name: Ubuntu-golden-image
+  label: ubuntu-golden-image
+  description: ubuntu golden image
+  visibility: public
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: oob
+    readymethod: wait_for_power_off
+  os:
+    name: ubuntu-golden-image
+    version: 26.04
+    credential:
+      username: root
+      password: Setup00!
+      passwordtype: plain
+  tags:
+    - ubuntu
+templateassets:
+  - file:
+      name: meta-data
+      path: /meta-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: boot-golden-image.iso
+      path: /boot-golden-image.iso
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/boot-golden-image.iso
+      templatingengine: false
+    usage: build_source_image
+  - file:
+      name: noble-server-cloudimg-amd64.raw.img.zst.iso
+      path: /noble-server-cloudimg-amd64.raw.img.zst.iso
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/noble-server-cloudimg-amd64.raw.img.zst.iso
+      templatingengine: false
+    usage: secondary_image
+  - file:
+      name: user-data
+      path: /user-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: 01-netcfg.yaml
+      path: /01-netcfg.yaml
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component

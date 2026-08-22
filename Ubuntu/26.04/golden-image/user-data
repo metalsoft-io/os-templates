@@ -1,0 +1,150 @@
+#cloud-config
+
+# ============================================================
+# Locale / Keyboard
+# ============================================================
+
+locale: en_US.UTF-8
+
+keyboard:
+  layout: us
+  variant: ""
+
+# ============================================================
+# Timezone
+# ============================================================
+
+timezone: UTC
+
+# ============================================================
+# Hostname
+# ============================================================
+
+preserve_hostname: false
+prefer_fqdn_over_hostname: true
+
+{% if serverInstance and serverInstance.provisionInstanceDnsRecords %}
+fqdn: {{ serverInstance.fqdn | default('test.local') }}
+{% if serverInstance.hostname %}
+hostname: {{ serverInstance.hostname }}
+{% else %}
+hostname: {{ serverInstance.label | default('test') }}
+{% endif %}
+{% else %}
+fqdn: test.local
+hostname: test
+{% endif %}
+
+manage_etc_hosts: true
+
+# ============================================================
+# Users
+# ============================================================
+
+users:
+  - default
+  - name: root
+    lock_passwd: false
+
+# ============================================================
+# Password
+#
+# "password" applies to cloud-init's default user.
+# ============================================================
+
+ssh_pwauth: true
+
+{% if serverInstance and serverInstance.osCredentials %}
+{% if serverInstance.osCredentials.initialPasswordEncrypted %}
+password: {{ serverInstance.osCredentials.initialPasswordEncrypted }}
+{% else %}
+password: Setup00!
+{% endif %}
+{% endif %}
+
+chpasswd:
+  expire: false
+
+# ============================================================
+# SSH Authorized Keys
+#
+# These keys are installed for cloud-init's default user.
+# ============================================================
+
+{% if managementSSHKey or (userSSHKeys and (userSSHKeys | length)) %}
+ssh_authorized_keys:
+{% if userSSHKeys and (userSSHKeys | length) %}
+{% for key in userSSHKeys %}
+  - {{ key }}
+{% endfor %}
+{% endif %}
+{% if managementSSHKey %}
+  - {{ managementSSHKey }}
+{% endif %}
+{% endif %}
+
+# ============================================================
+# SSH Host Configuration
+# ============================================================
+
+ssh_deletekeys: true
+
+ssh_genkeytypes:
+  - rsa
+  - ecdsa
+  - ed25519
+
+disable_root: false
+allow_public_ssh_keys: true
+
+no_ssh_fingerprints: true
+authkey_hash: sha256
+
+ssh:
+  emit_keys_to_console: true
+
+# ============================================================
+# Grow cloned root partition/filesystem to available disk size
+# ============================================================
+
+growpart:
+  mode: auto
+  devices:
+    - /
+  ignore_growroot_disabled: false
+
+resize_rootfs: true
+
+# ============================================================
+# Package Handling
+# ============================================================
+
+package_update: false
+package_upgrade: false
+package_reboot_if_required: false
+
+# ============================================================
+# Commands run near the end of first-boot cloud-init
+# ============================================================
+
+runcmd:
+
+  # Give root an empty password for local console access
+  - passwd -d root
+
+  # Ensure systemd-resolved owns /etc/resolv.conf
+  - rm -f /etc/resolv.conf
+  - ln -s ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+
+# ============================================================
+# Final Message
+# ============================================================
+
+final_message: "Cloud-init Done!"
+
+power_state:
+  delay: now
+  mode: poweroff
+  message: "Powering off."
+  timeout: 120
+  condition: true
