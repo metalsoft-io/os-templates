@@ -1,0 +1,45 @@
+template:
+  name: some name
+  label: some-name
+  description: description of the OS
+  visibility: public
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: oob
+    readymethod: wait_for_power_off
+  os:
+    name: generic
+    version: 26.04
+    credential:
+      username: root
+      password: Setup00!
+      passwordtype: plain
+  tags:
+    - generic
+templateassets:
+  - file:
+      name: boot-golden-image.iso
+      path: /boot-golden-image.iso
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/boot-golden-image.iso
+      templatingengine: false
+    usage: build_source_image
+  - file:
+      name: name-of-the-custom-golden-image-in-iso-or-img-or-zst-format
+      path: /example-golden-image.raw.img.zst.iso
+      mimetype: application/octet-stream
+      url: url-to-the-image
+      templatingengine: false
+    usage: secondary_image
+  - file:
+      name: replace-this-asset-with-proper-cloud-init-files
+      path: /some-cloud-init-file
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
