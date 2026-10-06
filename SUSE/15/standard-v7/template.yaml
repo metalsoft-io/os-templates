@@ -17,7 +17,7 @@ template:
     credential:
       password: "suserocks!"
       passwordtype: "generated"
-      username: "root"
+      username: "suse"
     name: "SUSE"
     sshport: 22
     version: "15.6"
