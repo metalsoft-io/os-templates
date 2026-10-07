@@ -117,6 +117,13 @@
     <timezone>Etc/GMT</timezone>
   </timezone>
 
+  <!-- Bootloader Configuration -->
+  <bootloader>
+    <global>
+      <timeout config:type="integer">5</timeout> <!-- GRUB menu timeout in seconds -->
+    </global>
+  </bootloader>
+
   {%- if use_custom_partitioning %}
   <!-- Custom Partitioning Scheme -->
   <partitioning config:type="list">
@@ -508,7 +515,6 @@
           {%- elif interface.ipv6Addresses | length > 0 %}
             <bootproto>static</bootproto>
             <ipaddr>{{interface.ipv6Addresses[0].cidr}}</ipaddr>
-            <mtu>{{interface.mtu}}</mtu>
           {%- else %}
             <bootproto>none</bootproto>
           {%- endif %}
@@ -593,36 +599,38 @@
     <routing>
       <ipv4_forward config:type="boolean">false</ipv4_forward>
       <ipv6_forward config:type="boolean">false</ipv6_forward>
+      {%- set default_device = "" %}
+      {%- set default_gateway = "" %}
+      {%- for interface in interface_vlan %}
+        {%- if interface.routes and interface.routes[0] and default_device == "" %}
+          {%- set default_device = "vlan" ~ interface.vlanId %}
+          {%- set default_gateway = interface.routes[0].via %}
+        {%- endif %}
+      {%- endfor %}
+      {%- if default_device == "" %}
+        {%- for interface in interface_bond %}
+          {%- if interface.routes and interface.routes[0] and default_device == "" %}
+            {%- set default_device = construct_interface_name(interface) %}
+            {%- set default_gateway = interface.routes[0].via %}
+          {%- endif %}
+        {%- endfor %}
+      {%- endif %}
+      {%- if default_device == "" %}
+        {%- for interface in interface_physical %}
+          {%- if interface.routes and interface.routes[0] and default_device == "" %}
+            {%- set default_device = construct_interface_name(interface) %}
+            {%- set default_gateway = interface.routes[0].via %}
+          {%- endif %}
+        {%- endfor %}
+      {%- endif %}
       <routes config:type="list">
+        {%- if default_gateway %}
         <route>
           <destination>default</destination>
-          {%- set default_device = "" %}
-          {%- set default_gateway = "" %}
-          {%- for interface in interface_vlan %}
-            {%- if interface.routes and interface.routes[0] and default_device == "" %}
-              {%- set default_device = "vlan" ~ interface.vlanId %}
-              {%- set default_gateway = interface.routes[0].via %}
-            {%- endif %}
-          {%- endfor %}
-          {%- if default_device == "" %}
-            {%- for interface in interface_bond %}
-              {%- if interface.routes and interface.routes[0] and default_device == "" %}
-                {%- set default_device = construct_interface_name(interface) %}
-                {%- set default_gateway = interface.routes[0].via %}
-              {%- endif %}
-            {%- endfor %}
-          {%- endif %}
-          {%- if default_device == "" %}
-            {%- for interface in interface_physical %}
-              {%- if interface.routes and interface.routes[0] and default_device == "" %}
-                {%- set default_device = construct_interface_name(interface) %}
-                {%- set default_gateway = interface.routes[0].via %}
-              {%- endif %}
-            {%- endfor %}
-          {%- endif %}
           <device>{{ default_device }}</device>
           <gateway>{{ default_gateway }}</gateway>
         </route>
+        {%- endif %}
       </routes>
     </routing>
   </networking>
