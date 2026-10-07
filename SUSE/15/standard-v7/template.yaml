@@ -31,7 +31,14 @@ templateassets:
       path: "/autoinst.xml"
       templatingengine: true
     usage: "build_component"
-  - 
+  -
+    file:
+      mimetype: "text/plain"
+      name: "grub.cfg"
+      path: "/EFI/BOOT/grub.cfg"
+      templatingengine: false
+    usage: "build_component"
+  -
     file:
       mimetype: "application/octet-stream"
       name: "SLE-15-SP6-Full-x86_64-GM-Media1.iso"
