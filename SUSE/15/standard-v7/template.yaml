@@ -36,7 +36,7 @@ templateassets:
       mimetype: "text/plain"
       name: "grub.cfg"
       path: "/EFI/BOOT/grub.cfg"
-      templatingengine: false
+      templatingengine: true
     usage: "build_component"
   -
     file:
