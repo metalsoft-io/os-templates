@@ -99,6 +99,11 @@
     <mode>
       <confirm config:type="boolean">false</confirm> <!-- No confirmation prompts -->
       <final_halt config:type="boolean">true</final_halt>
+      <!-- Finish everything in the first stage: some BMCs (e.g. HPE iLO with
+           BootOnNextServerReset) eject the virtual media at the first reboot -->
+      <second_stage config:type="boolean">false</second_stage>
+      <!-- Power off at the end of the first stage (final_halt only applies after a second stage) -->
+      <halt config:type="boolean">true</halt>
     </mode>
   </general>
 
@@ -391,6 +396,7 @@
     <packages t="list">
       <package>iputils</package>
       <package>sudo</package>
+      <package>openssh</package>
     </packages>
     <products config:type="list">
       <product>SLES</product>
@@ -708,44 +714,37 @@ visudo -c -f /etc/sudoers.d/{{ initial_username }}
 echo "Sudo configuration for {{ initial_username }} completed"
 {%- endif %}
 
-# Ensure sudo groups exist and are configured
-if ! grep -q "^%wheel" /etc/sudoers; then
-    echo "%wheel ALL=(ALL:ALL) ALL" >> /etc/sudoers
-fi
-
-if ! grep -q "^%sudo" /etc/sudoers; then
-    echo "%sudo ALL=(ALL:ALL) ALL" >> /etc/sudoers
-fi
+# NOTE: do not append rules to /etc/sudoers: anything added after its
+# "@includedir /etc/sudoers.d" line overrides the NOPASSWD drop-in above
 
 # Verify configuration
 echo "Current sudo configuration:"
 cat /etc/sudoers.d/{{ initial_username }} 2>/dev/null || echo "No user-specific sudoers file found"
+
+# The second stage is disabled (see <second_stage>), so apply here what it used to do:
+
+# SSH server
+systemctl enable sshd
+
+{%- if default_gateway %}
+
+# Default route (YaST drops it in the first stage because phy<N> does not exist yet)
+echo "default {{ default_gateway }} - {{ default_device }}" > /etc/sysconfig/network/routes
+{%- endif %}
+
+# NTP (the <ntp-client> section is only applied in the second stage)
+{%- if siteConfig and siteConfig.NTPServers %}
+rm -f /etc/chrony.d/pool.conf
+cat > /etc/chrony.d/metalsoft.conf <<'METALSOFT_EOF'
+{%- for ntp_server in siteConfig.NTPServers %}
+server {{ ntp_server }} iburst
+{%- endfor %}
+METALSOFT_EOF
+{%- endif %}
+systemctl enable chronyd
         ]]></source>
       </script>
     </chroot-scripts>
   </scripts>
-
-  <!-- NTP Client Configuration -->
-  <ntp-client>
-    <ntp_policy>auto</ntp_policy>
-    <ntp_servers config:type="list">
-      {%- if siteConfig and siteConfig.NTPServers %}
-        {%- for ntp_server in siteConfig.NTPServers %}
-      <ntp_server>
-        <address>{{ ntp_server }}</address>
-        <iburst config:type="boolean">false</iburst>
-        <offline config:type="boolean">true</offline>
-      </ntp_server>
-        {%- endfor %}
-      {%- else %}
-      <ntp_server>
-        <address>pool.ntp.org</address>
-        <iburst config:type="boolean">false</iburst>
-        <offline config:type="boolean">true</offline>
-      </ntp_server>
-      {%- endif %}
-    </ntp_servers>
-    <ntp_sync>15</ntp_sync>
-  </ntp-client>
 
 </profile>
