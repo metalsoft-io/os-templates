@@ -1,0 +1,170 @@
+#cloud-config
+# https://ubuntu.com/server/docs/install/autoinstall
+autoinstall:
+  version: 1
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#early-commands
+  early-commands:
+    - echo "Early commnads ..."
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#locale
+  locale: en_US.utf8
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#refresh-installer
+  refresh-installer:
+    update: no
+    channel: "stable/ubuntu-$REL"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#keyboard
+  keyboard:
+    layout: "us"
+    variant: ""
+    toggle:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#source
+  # source:
+  #   id: "ubuntu-server-minimal"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#proxy
+  # proxy:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#apt
+  # https://curtin.readthedocs.io/en/latest/topics/apt_source.html
+  apt:
+    preserve_sources_list: false
+    mirror-selection:
+      primary:
+        - country-mirror
+        - arches: [i386, amd64]
+          uri: "http://archive.ubuntu.com/ubuntu"
+        - arches: [s390x, arm64, armhf, powerpc, ppc64el, riscv64]
+          uri: "http://ports.ubuntu.com/ubuntu-ports"
+    fallback: offline-install
+    geoip: true
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#storage
+  # a superset of that supported by curtin: https://curtin.readthedocs.io/en/latest/topics/storage.html
+  # The extensions to the curtin syntax are around disk selection and partition/logical volume sizing.
+  storage:
+    layout:
+      name: direct
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#ssh
+  ssh:
+    install-server: true
+    {% if managementSSHKey or (userSSHKeys and (userSSHKeys | length)) -%}
+    authorized-keys:
+    {%- if userSSHKeys and (userSSHKeys | length) %}
+    {%- for key in userSSHKeys %}
+      - {{ key | dump | safe }}
+    {%- endfor %}
+    {%- endif %}
+    {%- if managementSSHKey %}
+      - {{ managementSSHKey | dump | safe }}
+    {%- endif %}
+    {%- endif %}
+    allow-pw: true
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#snaps
+  # snaps:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#debconf-selections
+  # debconf-selections:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#packages
+  # packages:
+  #   - curl
+  #   - gnupg
+  #   - lsb-release
+  #   - software-properties-common
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#late-commands
+  late-commands:
+    # /cdrom is the stock installer ISO; the netplan file is on the CIDATA boot ISO
+    - mkdir -p /run/metalsoft-cidata && mount -o ro /dev/disk/by-label/CIDATA /run/metalsoft-cidata
+    - install -m 600 /run/metalsoft-cidata/01-netcfg.yaml /target/etc/netplan/01-netcfg.yaml
+    - umount /run/metalsoft-cidata
+    - |
+      printf 'GRUB_CMDLINE_LINUX_DEFAULT="intel_iommu=on iommu=pt"\n' \
+        > /target/etc/default/grub.d/99-iommu.cfg
+    - curtin in-target -- update-grub
+    - echo "Done"
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#error-commands
+  # Shell commands to run after the install has failed.
+  # error-commands:
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#reporting
+  reporting:
+    builtin:
+      type: print
+
+  network:
+    version: 2
+    renderer: networkd
+    ethernets: {}
+
+  # https://ubuntu.com/server/docs/install/autoinstall-reference#user-data
+  user-data:
+    # = Runcmd =
+    # Run commands on first boot
+    runcmd:
+      - rm -f /etc/resolv.conf
+      - ln -s ../run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+    # = Timezone =
+    timezone: UTC
+    # = Set Hostname/Update Hostname =
+    preserve_hostname: false
+    {#- Only prefer the FQDN when one is given: without "fqdn", cloud-init takes it from
+        the installed system's datasource ("None"), which yields "localhost" #}
+    {%- if serverInstance and serverInstance.provisionInstanceDnsRecords %}
+    prefer_fqdn_over_hostname: true
+    fqdn: {{ serverInstance.fqdn | default('test.local') | dump | safe }}
+    {%- if serverInstance.hostname %}
+    hostname: {{ serverInstance.hostname | dump | safe }}
+    {%- else %}
+    hostname: {{ serverInstance.label | default('test') | dump | safe }}
+    {%- endif %}
+    {%- else %}
+    prefer_fqdn_over_hostname: false
+    hostname: {{ (serverInstance.label if (serverInstance and serverInstance.label) else 'test') | dump | safe }}
+    {%- endif %}
+    # = Update Etc Hosts =
+    manage_etc_hosts: true
+    # = Set Passwords =
+    ssh_pwauth: true
+    {% if serverInstance and serverInstance.osCredentials -%}
+    {%- if serverInstance.osCredentials.initialPasswordEncrypted %}
+    password: {{ serverInstance.osCredentials.initialPasswordEncrypted | dump | safe }}
+    {%- else %}
+    password: Setup00!
+    {%- endif %}
+    {%- endif %}
+    chpasswd: { expire: false }
+    # = Users and Groups =
+    users:
+      - default
+      - name: root
+        lock_passwd: false
+    # = Growpart =
+    growpart:
+      mode: auto
+      devices: ['/']
+      ignore_growroot_disabled: false
+    # = SSH =
+    ssh_deletekeys: true
+    ssh_genkeytypes: [rsa, ecdsa, ed25519]
+    disable_root: false
+    allow_public_ssh_keys: true
+    # SSH Authkey Fingerprints
+    no_ssh_fingerprints: true
+    authkey_hash: sha256
+    # = Keys to Console =
+    ssh:
+      emit_keys_to_console: true
+    # = Package Update Upgrade Install =
+    package_update: false
+    package_upgrade: false
+    package_reboot_if_required: false
+    # = Final Message =
+    final_message: Cloud-init Done!
+  shutdown: "poweroff"

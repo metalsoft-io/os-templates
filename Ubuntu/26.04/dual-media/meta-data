@@ -1,0 +1,1 @@
+instance-id: {{ ('metalsoft-' ~ (serverInstance.label if (serverInstance and serverInstance.label) else 'instance')) | dump | safe }}

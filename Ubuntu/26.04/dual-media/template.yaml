@@ -1,0 +1,72 @@
+template:
+  name: Ubuntu 26.04 LTS (dual media)
+  label: ubuntu-26-04-lts-dual-media
+  description: Ubuntu 26.04 LTS - stock installer ISO on virtual media 2, small CIDATA boot ISO on virtual media 1
+  visibility: public
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: oob
+    readymethod: wait_for_power_off
+  os:
+    name: Ubuntu
+    version: 26.04
+    credential:
+      username: ubuntu
+      password: Setup00!
+      passwordtype: plain
+  tags:
+    - ubuntu
+templateassets:
+  # Small UEFI boot ISO (volume label CIDATA, Ubuntu's signed shim + GRUB). The image
+  # builder adds the files below to it; it is mounted on virtual media 1 and booted.
+  - file:
+      name: ubuntu-cidata-boot.iso
+      path: /ubuntu-cidata-boot.iso
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/ubuntu/ubuntu-cidata-boot.iso
+      templatingengine: false
+    usage: build_source_image
+  # Stock installer ISO, mounted unmodified on virtual media 2.
+  - file:
+      name: ubuntu-26.04-live-server-amd64.iso
+      path: /ubuntu-26.04-live-server-amd64.iso
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/ubuntu/ubuntu-26.04-live-server-amd64.iso
+      templatingengine: false
+    usage: secondary_image
+  - file:
+      name: grub.cfg
+      path: /boot/grub/grub.cfg
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: user-data
+      path: /user-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: meta-data
+      path: /meta-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: vendor-data
+      path: /vendor-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: 01-netcfg.yaml
+      path: /01-netcfg.yaml
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
