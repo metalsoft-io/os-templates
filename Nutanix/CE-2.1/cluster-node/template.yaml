@@ -1,0 +1,54 @@
+# phoenix.x86_64-fnd_5.6.1_patch-aos_6.8.1_ga.iso (Nutanix Community Edition 2.1)
+# LAB USE ONLY. See README.md for the files to host and how to register this template.
+template:
+  name: Nutanix CE 2.1 Cluster Node
+  label: nutanix-ce-2-1-cluster-node
+  description: Unattended Nutanix Community Edition 2.1 (AOS 6.8.1 / AHV 20230302) node install, used by the nutanix_ce extension
+  visibility: private
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: "oob"
+    readymethod: "wait_for_ssh"
+  os:
+    # AHV default root credentials; the extension's playbooks log in to the hosts with them.
+    credential:
+      password: "nutanix/4u"
+      passwordtype: "plain"
+      username: "root"
+    name: "Nutanix CE"
+    sshport: 22
+    version: "2.1"
+  tags:
+    - nutanix-ce-2-1-cluster-node
+    - nutanix-ce
+templateassets:
+  - file:
+      mimetype: "text/plain"
+      name: "grub.cfg"
+      path: "/EFI/BOOT/grub.cfg"
+      templatingengine: true
+    usage: "build_component"
+  # Run by the answer file's post_phoenix hook from the mounted installer ISO (see the script header).
+  # templatingengine must be true even though nothing is templated: osImageBuild encrypts only rendered
+  # assets, passes non-templated text assets through unencrypted, and the image builder then fails with
+  # "Invalid encrypted data. It must contain encryption metadata delimiter." The script wraps itself in
+  # {% raw %} (inside bash comments) so nunjucks leaves it verbatim.
+  - file:
+      mimetype: "text/plain"
+      name: "post_phoenix.sh"
+      path: "/post_phoenix.sh"
+      templatingengine: true
+    usage: "build_component"
+  - file:
+      mimetype: "application/octet-stream"
+      name: "phoenix.x86_64-fnd_5.6.1_patch-aos_6.8.1_ga.iso"
+      path: "/phoenix.x86_64-fnd_5.6.1_patch-aos_6.8.1_ga.iso"
+      templatingengine: false
+      url: "https://repo.metalsoft.io/.nutanix/ce-2.1/phoenix.x86_64-fnd_5.6.1_patch-aos_6.8.1_ga.iso"
+    usage: "build_source_image"
