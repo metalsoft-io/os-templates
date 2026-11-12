@@ -1,0 +1,84 @@
+#ps1_sysnative
+{#-
+  First boot of the golden image. Cloudbase-Init's UserDataPlugin runs this once, reading it from the
+  CIDATA boot ISO. Hostname (meta-data) and network (network-config) are applied by Cloudbase-Init itself.
+-#}
+{%- set si = serverInstance or {} %}
+{%- set password = si.osCredentials.initialPasswordEncrypted if si.osCredentials else '' %}
+{%- set keys = [] %}
+{%- for key in (userSSHKeys or []) %}{% if key %}{% set keys = (keys.push(key), keys) %}{% endif %}{% endfor %}
+{%- if managementSSHKey %}{% set keys = (keys.push(managementSSHKey), keys) %}{% endif %}
+{%- set ntp = [] %}
+{%- for server in ((siteConfig.NTPServers if siteConfig else []) or []) %}{% if server %}{% set ntp = (ntp.push(server), ntp) %}{% endif %}{% endfor %}
+$ErrorActionPreference = 'Stop'
+
+# The built-in Administrator account, found by its well-known SID (its name can be localized or renamed)
+$admin = Get-LocalUser | Where-Object { $_.SID.Value -like 'S-1-5-*-500' }
+{%- if password %}
+
+# Administrator password: the one MetalSoft generated for this server
+$password = ConvertTo-SecureString -String '{{ password | replace("'", "''") | safe }}' -AsPlainText -Force
+Set-LocalUser -SID $admin.SID -Password $password -PasswordNeverExpires $true
+Remove-Variable password
+{%- endif %}
+Enable-LocalUser -SID $admin.SID
+{%- if keys | length %}
+
+# SSH keys, only if OpenSSH Server is installed in the image
+if (Get-Service -Name sshd -ErrorAction SilentlyContinue) {
+    $keysFile = Join-Path $env:ProgramData 'ssh\administrators_authorized_keys'
+    New-Item -ItemType Directory -Force -Path (Split-Path $keysFile) | Out-Null
+    $keys = @(
+{%- for key in keys %}
+        '{{ key | replace("'", "''") | safe }}'
+{%- endfor %}
+    )
+    Set-Content -Path $keysFile -Value $keys -Encoding ascii
+    # Administrators and SYSTEM only, as OpenSSH requires; SIDs so localized group names don't matter
+    icacls.exe $keysFile /inheritance:r /grant '*S-1-5-32-544:F' /grant '*S-1-5-18:F' | Out-Null
+    Set-Service -Name sshd -StartupType Automatic
+}
+{%- endif %}
+{%- if ntp | length %}
+
+# Time servers
+Set-Service -Name W32Time -StartupType Automatic
+Start-Service -Name W32Time
+w32tm.exe /config /manualpeerlist:"{{ ntp | join(' ') }}" /syncfromflags:manual /update | Out-Null
+{%- endif %}
+
+# Grow C: to the end of the disk. ExtendVolumesPlugin does this too when it's enabled; repeating it is harmless.
+$cPartition = Get-Partition -DriveLetter C
+$cMax = (Get-PartitionSupportedSize -DriveLetter C).SizeMax
+if ($cMax -gt ($cPartition.Size + 1MB)) {
+    Resize-Partition -DriveLetter C -Size $cMax
+}
+
+# Power off once Cloudbase-Init has finished, so MetalSoft's wait_for_power_off completes.
+# Provisioning is one-shot: Cloudbase-Init is also stopped from running on later boots.
+$conf = Join-Path $env:ProgramFiles 'Cloudbase Solutions\Cloudbase-Init\conf\cloudbase-init.conf'
+$confLines = @(if (Test-Path $conf) { Get-Content -Path $conf })
+$scriptsSetting = $confLines | Select-String -Pattern '^\s*local_scripts_path\s*=\s*(.+?)\s*$' | Select-Object -First 1
+$pluginsSetting = $confLines | Select-String -Pattern '^\s*plugins\s*=\s*(.+?)\s*$' | Select-Object -First 1
+# The default plugin list (no plugins= line) includes LocalScriptsPlugin
+$localScriptsRuns = $scriptsSetting -and ((-not $pluginsSetting) -or
+    ($pluginsSetting.Matches[0].Groups[1].Value -match 'LocalScriptsPlugin'))
+if ($localScriptsRuns) {
+    # LocalScriptsPlugin runs after every other plugin, so a script left in its folder now
+    # powers the server off at the very end of this boot
+    $localScripts = $scriptsSetting.Matches[0].Groups[1].Value
+    New-Item -ItemType Directory -Force -Path $localScripts | Out-Null
+    @'
+# Written by the MetalSoft user-data on first boot.
+sc.exe config cloudbase-init start= disabled | Out-Null
+shutdown.exe /s /t 15 /f /d p:4:1 /c "MetalSoft provisioning complete"
+exit 0
+'@ | Set-Content -Path (Join-Path $localScripts '99-metalsoft-poweroff.ps1') -Encoding ascii
+} else {
+    # No LocalScriptsPlugin in this image: power off two minutes after this script returns,
+    # which leaves Cloudbase-Init time to finish its remaining plugins and save its state
+    sc.exe config cloudbase-init start= disabled | Out-Null
+    shutdown.exe /s /t 120 /f /d p:4:1 /c "MetalSoft provisioning complete"
+}
+
+exit 0

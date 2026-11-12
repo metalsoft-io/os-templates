@@ -1,0 +1,3 @@
+{%- set si = serverInstance or {} -%}
+instance-id: {{ ('metalsoft-' ~ (si.label or 'instance')) | dump | safe }}
+local-hostname: {{ (si.hostname or si.label or 'localhost') | dump | safe }}

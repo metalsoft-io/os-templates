@@ -1,0 +1,98 @@
+{#-
+  NoCloud network-config, version 2. Read on first boot by cloud-init (Linux) and by
+  Cloudbase-Init 1.1.5 or later (Windows). Interfaces are matched by MAC address and named
+  phy<N>, bond<N> and <parent>.<vlan id>.
+-#}
+{%- set dns = [] %}
+{%- for server in ((siteConfig.DNSServers if siteConfig else []) or []) %}{% if server %}{% set dns = (dns.push(server), dns) %}{% endif %}{% endfor %}
+{%- set physicals = [] %}
+{%- set bonds = [] %}
+{%- set vlans = [] %}
+{%- for interface in ((network.interfaces if network else []) or []) %}
+  {%- if interface.interfaceType == 'physical' %}{% set physicals = (physicals.push(interface), physicals) %}
+  {%- elif interface.interfaceType == 'bond' %}{% set bonds = (bonds.push(interface), bonds) %}
+  {%- elif interface.interfaceType == 'vlan' and interface.links and interface.links | length %}{% set vlans = (vlans.push(interface), vlans) %}
+  {%- endif %}
+{%- endfor %}
+
+{%- macro linkName(link) -%}
+{{ 'bond' if link.interfaceType == 'bond' else 'phy' }}{{ link.id }}
+{%- endmacro %}
+
+{%- macro layer3(interface) %}
+    {%- if interface.mtu %}
+    mtu: {{ interface.mtu }}
+    {%- endif %}
+    {%- set ipv4 = interface.ipv4Addresses or [] %}
+    {%- set ipv6 = interface.ipv6Addresses or [] %}
+    {%- if ipv4 | length or ipv6 | length %}
+    addresses:
+      {%- for address in ipv4 %}
+      - {{ address.cidr }}
+      {%- endfor %}
+      {%- for address in ipv6 %}
+      - {{ address.cidr }}
+      {%- endfor %}
+    {%- if ipv4 | length and dns | length %}
+    nameservers:
+      addresses:
+        {%- for server in dns %}
+        - {{ server }}
+        {%- endfor %}
+    {%- endif %}
+    {%- elif interface.dhcp4 %}
+    dhcp4: true
+    {%- endif %}
+    {%- if interface.routes and interface.routes | length %}
+    routes:
+      {%- for route in interface.routes %}
+      - to: {{ route.to }}
+        via: {{ route.via }}
+        {%- if route.metric %}
+        metric: {{ route.metric }}
+        {%- endif %}
+      {%- endfor %}
+    {%- endif %}
+{%- endmacro -%}
+version: 2
+{%- if physicals | length %}
+ethernets:
+  {%- for interface in physicals %}
+  phy{{ interface.typeInterfaceId }}:
+    match:
+      macaddress: {{ (interface.macAddress | lower) | dump | safe }}
+    set-name: phy{{ interface.typeInterfaceId }}
+    {{- layer3(interface) }}
+  {%- endfor %}
+{%- endif %}
+{%- if bonds | length %}
+bonds:
+  {%- for bond in bonds %}
+  {%- set parameters = bond.parameters or {} %}
+  {%- set mode = bond.bondMode or parameters.mode or '802.3ad' %}
+  bond{{ bond.typeInterfaceId }}:
+    interfaces:
+      {%- for member in (bond.members or []) %}
+      - {{ linkName(member) }}
+      {%- endfor %}
+    parameters:
+      mode: {{ mode }}
+      {%- if mode == '802.3ad' %}
+      lacp-rate: {{ parameters.lacpRate or 'fast' }}
+      {%- endif %}
+      {%- if mode == '802.3ad' or mode == 'balance-xor' %}
+      transmit-hash-policy: {{ parameters.transmitHashPolicy or 'layer3+4' }}
+      {%- endif %}
+      mii-monitor-interval: {{ parameters.miiMonitorInterval or 100 }}
+    {{- layer3(bond) }}
+  {%- endfor %}
+{%- endif %}
+{%- if vlans | length %}
+vlans:
+  {%- for vlan in vlans %}
+  {{ linkName(vlan.links[0]) }}.{{ vlan.vlanId }}:
+    id: {{ vlan.vlanId }}
+    link: {{ linkName(vlan.links[0]) }}
+    {{- layer3(vlan) }}
+  {%- endfor %}
+{%- endif %}
