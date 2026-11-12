@@ -28,6 +28,8 @@ and their BMCs support dual virtual media mounts. Then:
 7. [**Test it on one server**](#step-7-test-on-one-server): watch the console until the server powers off, then check its network and logins.
 8. [**Maintain it**](#step-8-change-it-later): update rendered files in place, make a new template for each new image, publish once it passes.
 
+To do steps 1 to 6 with one command, see [Helper scripts](#appendix-helper-scripts).
+
 To change the boot ISO's script or build your own boot ISO, see
 [How the boot ISO works](#appendix-how-the-boot-iso-works).
 
@@ -465,6 +467,57 @@ metalcloud-cli os-template update $TID --config-source publish.json
 ```
 
 <!-- BEGIN EXAMPLES: generated from linux-cloud-init/ and windows-cloudbase-init/; regenerate after changing them -->
+## Appendix: Helper scripts
+
+Two scripts do steps of this guide for you. They're next to this file in the repository.
+
+| Script | Runs on | Does |
+|---|---|---|
+| `create-golden-template.sh` | bash on Linux, macOS, or WSL on Windows | steps 1 to 6: checks the image, compresses it (optional), packages it, uploads it with `scp` (optional), writes the template directory, checks it and creates the template |
+| `create-golden-template.ps1` | Windows PowerShell 5.1 and PowerShell 7 | steps 4 to 6, for an image ISO you've already packaged and uploaded (`-ImageUrl`) |
+
+Run either one in a terminal without options and it asks for everything it needs, checks each answer, shows a
+summary with the same run as one command, and asks before changing anything. Options you give aren't asked
+again; `--no-prompt` (`-NoPrompt`) never asks, for scripts and CI.
+
+- **Controller check first:** before any question, the script checks that `metalcloud-cli` has an endpoint,
+  that the controller accepts the API key, and that the CLI supports the controller's version. It says what to
+  set when one is missing. A dry run only warns.
+- **Template fields:** label, name, description, `os.name`, `os.version` and the boot ISO's URL, with defaults.
+- **First-boot files:** the built-in examples (the same files as in [Example templates](#appendix-example-templates)),
+  or your own `user-data`, `meta-data` and `network-config` (`--user-data`, `--meta-data`, `--network-config`;
+  `-UserDataFile`, `-MetaDataFile`, `-NetworkConfigFile`). Any you don't give comes from the example. Your files
+  are rendered for each server like the examples, and written as UTF-8 without a byte order mark and with LF line
+  endings.
+- **Template directory:** written to `golden-templates/golden/<os>/<label>/` in the current folder, after you
+  confirm, or in the folder you name (`--templates-dir`, `-TemplatesDir`). `metalcloud-cli` reads every file
+  under the folder it's given, so the scripts give it a temporary copy of the new template: your folder may
+  hold anything else.
+- **Dry run:** `--dry-run` (`-DryRun`) does everything except creating the template.
+- **Not done:** testing (step 7) and publishing (step 8).
+
+```bash
+./create-golden-template.sh            # asks for everything
+./create-golden-template.sh --no-prompt --os linux --label rocky-9-golden-v1 --image rocky-9.raw.zst \
+    --url-base https://repo.example.com/images --upload me@repo.example.com:/var/www/images
+```
+
+```powershell
+.\create-golden-template.ps1           # asks for everything
+.\create-golden-template.ps1 -NoPrompt -OS windows -Label ws2025-golden-v1 -OSVersion 2025 `
+    -ImageUrl https://repo.example.com/images/ws2025-golden-v1.raw.zst.iso
+```
+
+- **Tools:** both need `metalcloud-cli`. The bash script also needs `xorriso` to package, `zstd` for zstd images,
+  `qemu-img` only to convert qcow2, VMDK or VHDX images, and `scp` and `curl` only to upload.
+- **Help:** `./create-golden-template.sh --help`; `Get-Help .\create-golden-template.ps1 -Full`.
+- **Windows:** if the execution policy blocks the script, run it as
+  `powershell -ExecutionPolicy Bypass -File .\create-golden-template.ps1`. To check and package an image on
+  Windows too, run the bash script in WSL, from WSL's own file system rather than `/mnt/c`, which is slow for
+  large images.
+- **CLI flags:** `MC_CLI` (bash) or `-Cli` (PowerShell) sets the `metalcloud-cli` command with any global flags,
+  for example `metalcloud-cli -c <path to metalcloud.yaml>`.
+
 ## Appendix: Example templates
 
 Both examples are complete. Save each file under the name shown, in a directory three levels below the

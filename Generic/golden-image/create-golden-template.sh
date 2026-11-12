@@ -35,6 +35,12 @@ Template:
   --os-version VERSION  os.version (default: 1.0)
   --boot-iso-url URL    the boot ISO (default: https://repo.metalsoft.io/.iso/boot-golden-image.iso)
 
+First-boot files (rendered for each server, with the variables described in the guide):
+  --user-data FILE      your own user-data instead of the built-in example's
+  --meta-data FILE      your own meta-data instead of the built-in example's
+  --network-config FILE your own network-config instead of the built-in example's
+                        Any you don't give comes from the example. Asked when you run it without options.
+
 Packaging and upload (with --image):
   --url-base URL        where the packaged file will be served from, e.g. https://repo.example.com/images;
                         the image URL is <url-base>/<file name>
@@ -81,8 +87,9 @@ file_size() { wc -c < "$1" | tr -d ' '; }
 
 OS_FAMILY="" LABEL="" NAME="" DESCRIPTION="" OS_NAME="" OS_VERSION="" BOOT_ISO_URL=""
 IMAGE="" IMAGE_URL="" URL_BASE="" UPLOAD="" NO_UPLOAD=0 PACKAGE="" COMPRESS="" SOURCE="" ANSWER=""
-WORK_DIR="./golden-work" TEMPLATES_DIR="./golden-templates" CHECK_ONLY=0 DRY_RUN=0
+WORK_DIR="./golden-work" TEMPLATES_DIR="./golden-templates" TEMPLATES_DIR_SET=0 CHECK_ONLY=0 DRY_RUN=0
 NO_PROMPT=0 INTERACTIVE=0 ASSUME_YES=0
+USER_DATA_FILE="" META_DATA_FILE="" NETWORK_CONFIG_FILE="" FILES_CHOICE=""
 DEFAULT_BOOT_ISO_URL="https://repo.metalsoft.io/.iso/boot-golden-image.iso"
 
 while [[ $# -gt 0 ]]; do
@@ -98,6 +105,9 @@ while [[ $# -gt 0 ]]; do
         --os-name) OS_NAME="$2"; shift 2 ;;
         --os-version) OS_VERSION="$2"; shift 2 ;;
         --boot-iso-url) BOOT_ISO_URL="$2"; shift 2 ;;
+        --user-data) USER_DATA_FILE="$2"; shift 2 ;;
+        --meta-data) META_DATA_FILE="$2"; shift 2 ;;
+        --network-config) NETWORK_CONFIG_FILE="$2"; shift 2 ;;
         --image) IMAGE="$2"; shift 2 ;;
         --image-url) IMAGE_URL="$2"; shift 2 ;;
         --url-base) URL_BASE="$2"; shift 2 ;;
@@ -107,7 +117,7 @@ while [[ $# -gt 0 ]]; do
         --compress) COMPRESS=1; shift ;;
         --no-compress) COMPRESS=0; shift ;;
         --work-dir) WORK_DIR="$2"; shift 2 ;;
-        --templates-dir) TEMPLATES_DIR="$2"; shift 2 ;;
+        --templates-dir) TEMPLATES_DIR="$2"; TEMPLATES_DIR_SET=1; shift 2 ;;
         --check-only) CHECK_ONLY=1; shift ;;
         --dry-run) DRY_RUN=1; shift ;;
         --no-prompt) NO_PROMPT=1; shift ;;
@@ -232,12 +242,77 @@ valid_os_name() {
 }
 valid_package() { [[ "$1" == iso || "$1" == img ]] || { echo "answer iso or img"; return 1; }; }
 valid_url()     { [[ "$1" =~ ^https?://[^[:space:]]+$ ]] || { echo "give an http:// or https:// URL"; return 1; }; }
-valid_source()  { [[ "$1" =~ ^https?:// || -f "$1" ]] || { echo "no such file: $1"; return 1; }; }
+valid_image_url() {
+    valid_url "$1" || return 1
+    local file; file="$(basename "${1%%\?*}" | tr '[:upper:]' '[:lower:]')"
+    [[ "$file" == *.iso || "$file" == *.img ]] ||
+        { echo "the file name must end in .iso or .img (got '$(basename "${1%%\?*}")'): BMCs mount only those"; return 1; }
+}
+valid_source()  {
+    if [[ "$1" =~ ^https?:// ]]; then valid_image_url "$1"; return; fi
+    [[ -f "$1" ]] || { echo "no such file: $1"; return 1; }
+}
 valid_text()    { [[ -n "$1" ]] || { echo "this can't be empty"; return 1; }; }
 valid_yes_no()  { [[ "$1" =~ ^([yY]([eE][sS])?|[nN][oO]?)$ ]] || { echo "answer y or n"; return 1; }; }
 valid_upload()  { [[ -z "$1" || "$1" == *:* ]] || { echo "give user@host:/path (or leave it empty)"; return 1; }; }
+valid_files_choice() { [[ "$1" =~ ^(e|example|o|own)$ ]] || { echo "answer example or own"; return 1; }; }
+valid_file()    { [[ -f "${1/#\~/$HOME}" && -r "${1/#\~/$HOME}" ]] || { echo "no such file: $1"; return 1; }; }
+valid_file_or_example() { [[ "$1" == example ]] || valid_file "$1"; }
 
 [[ -z "$IMAGE" || -z "$IMAGE_URL" ]] || die "give --image or --image-url, not both"
+
+# The controller: metalcloud-cli needs an endpoint and an API key, and must match the controller's version.
+# Any call to the controller makes it check them; listing templates changes nothing.
+read -r -a MC <<< "$MC_CLI"
+CONTROLLER=""
+setup_help() {
+    info "Set the controller and your API key (from the controller UI: your user menu, API credentials):"
+    info "  export METALCLOUD_ENDPOINT=https://<controller>"
+    info "  export METALCLOUD_API_KEY=<API key>"
+    info "or put endpoint: and api_key: in metalcloud.yaml in the current folder, ~/.metalcloud/ or /etc/metalcloud/."
+}
+controller_problem() {  # controller_problem MESSAGE [help]: a dry run only warns
+    [[ "${2:-}" == help ]] && setup_help
+    if [[ $DRY_RUN -eq 1 ]]; then
+        warn "$1. A dry run doesn't need the controller; the real run would stop here."
+    else
+        die "$1"
+    fi
+}
+check_controller() {
+    local ver ctl_version out line
+    need "${MC[0]}" "metalcloud-cli, configured with METALCLOUD_ENDPOINT and METALCLOUD_API_KEY"
+    log "Checking the controller"
+    # "version" shows the endpoint metalcloud-cli uses (from the environment or its configuration file), the
+    # controller's version, and a "User ID" line only when the API key works
+    ver="$("${MC[@]}" version 2>&1 || true)"
+    if grep -q '^Metalsoft Endpoint:' <<< "$ver"; then
+        CONTROLLER="$(sed -n 's/^Metalsoft Endpoint: *//p' <<< "$ver" | head -1)"
+        [[ -n "$CONTROLLER" ]] || { controller_problem "metalcloud-cli has no API endpoint" help; return 0; }
+        ctl_version="$(sed -n 's/^Metalsoft Endpoint Version: *//p' <<< "$ver" | head -1)"
+        info "endpoint: $CONTROLLER${ctl_version:+ (version $ctl_version)}"
+        grep -q '^User ID:' <<< "$ver" ||
+            { controller_problem "metalcloud-cli has no API key, or $CONTROLLER doesn't accept it" help; return 0; }
+        info "API key accepted"
+    fi
+    # A real call: metalcloud-cli also refuses to work with a controller version it doesn't support
+    if out="$("${MC[@]}" os-template list -f json 2>&1 >/dev/null)"; then
+        info "metalcloud-cli $(sed -n 's/^CLI Version: *//p' <<< "$ver" | head -1) works with this controller"
+        return 0
+    fi
+    line="$(printf '%s\n' "$out" | grep -m1 '^Error: ' || true)"
+    [[ -n "$line" ]] || line="$(printf '%s\n' "$out" | grep -v '^Returned ' | grep -m1 . || true)"
+    line="${line#Error: }"
+    case "$line" in
+        "API endpoint is required"*) controller_problem "metalcloud-cli has no API endpoint" help ;;
+        "API key is required"*) controller_problem "metalcloud-cli has no API key" help ;;
+        "invalid API endpoint URL"*) controller_problem "metalcloud-cli's endpoint isn't a valid URL ($line)" help ;;
+        *"invalid version"*|*"incompatible version"*)
+            controller_problem "metalcloud-cli doesn't support the controller's version ($line): install the CLI release that matches the controller" ;;
+        *) controller_problem "metalcloud-cli can't use the controller: $line" ;;
+    esac
+}
+[[ $CHECK_ONLY -eq 1 ]] || check_controller
 
 if [[ $CHECK_ONLY -eq 0 ]]; then
     [[ -n "$OS_FAMILY" || $PROMPT -eq 0 ]] ||
@@ -252,7 +327,7 @@ if [[ -z "$IMAGE" && -z "$IMAGE_URL" ]]; then
     if [[ "$SOURCE" =~ ^https?:// ]]; then IMAGE_URL="$SOURCE"; else IMAGE="$SOURCE"; fi
 fi
 [[ -z "$IMAGE" || -f "$IMAGE" ]] || die "image not found: $IMAGE"
-[[ -z "$IMAGE_URL" ]] || check "$IMAGE_URL" valid_url "--image-url"
+[[ -z "$IMAGE_URL" ]] || check "$IMAGE_URL" valid_image_url "--image-url"
 [[ $CHECK_ONLY -eq 0 || -n "$IMAGE" ]] || die "--check-only needs a local image (--image)"
 
 # Step 1 for a local image: checked now, so a bad image stops the script before any more questions
@@ -327,12 +402,72 @@ OS_VERSION="${OS_VERSION:-1.0}"
 BOOT_ISO_URL="${BOOT_ISO_URL:-$DEFAULT_BOOT_ISO_URL}"
 check "$BOOT_ISO_URL" valid_url "--boot-iso-url"
 
+# First-boot files: the built-in example, or the user's own (rendered as templates for each server either way)
+if [[ -z "$USER_DATA_FILE$META_DATA_FILE$NETWORK_CONFIG_FILE" && $PROMPT -eq 1 ]]; then
+    log "First-boot files"
+    ask_until FILES_CHOICE "user-data, meta-data and network-config: the built-in $OS_FAMILY example, or your own? (example/own)" example valid_files_choice
+    if [[ "$FILES_CHOICE" == o* ]]; then
+        info "Give each file's path; leave one empty to use the example's."
+        ask_until USER_DATA_FILE "user-data file" example valid_file_or_example
+        ask_until META_DATA_FILE "meta-data file" example valid_file_or_example
+        ask_until NETWORK_CONFIG_FILE "network-config file" example valid_file_or_example
+        [[ "$USER_DATA_FILE" == example ]] && USER_DATA_FILE=""
+        [[ "$META_DATA_FILE" == example ]] && META_DATA_FILE=""
+        [[ "$NETWORK_CONFIG_FILE" == example ]] && NETWORK_CONFIG_FILE=""
+    fi
+fi
+USER_DATA_FILE="${USER_DATA_FILE/#\~/$HOME}" META_DATA_FILE="${META_DATA_FILE/#\~/$HOME}"
+NETWORK_CONFIG_FILE="${NETWORK_CONFIG_FILE/#\~/$HOME}"
+[[ -z "$USER_DATA_FILE" ]] || check "$USER_DATA_FILE" valid_file "--user-data"
+[[ -z "$META_DATA_FILE" ]] || check "$META_DATA_FILE" valid_file "--meta-data"
+[[ -z "$NETWORK_CONFIG_FILE" ]] || check "$NETWORK_CONFIG_FILE" valid_file "--network-config"
+first_line() { local l; l="$(tr -d '\r' < "$1" | grep -m1 -v '^[[:space:]]*$' || true)"; printf '%s' "${l#$'\xef\xbb\xbf'}"; }
+if [[ -n "$USER_DATA_FILE" ]]; then
+    case "$OS_FAMILY:$(first_line "$USER_DATA_FILE")" in
+        linux:'#'*|linux:'{'*|linux:Content-Type:*) ;;
+        windows:'#'*|windows:'{'*|windows:'rem cmd'*|windows:'<'*|windows:Content-Type:*) ;;
+        linux:*) warn "$USER_DATA_FILE doesn't start with a header such as #cloud-config or #!: cloud-init would ignore it" ;;
+        *) warn "$USER_DATA_FILE doesn't start with a header such as #ps1_sysnative or #cloud-config: Cloudbase-Init would ignore it" ;;
+    esac
+fi
+files_desc() {  # files_desc: which first-boot files are the user's and which come from the example
+    local d="" f v
+    for f in user-data meta-data network-config; do
+        case "$f" in user-data) v="$USER_DATA_FILE" ;; meta-data) v="$META_DATA_FILE" ;; *) v="$NETWORK_CONFIG_FILE" ;; esac
+        d+="${d:+, }$f ${v:-from the $OS_FAMILY example}"
+    done
+    printf '%s' "$d"
+}
+
+# The template directory is written on this computer: asked before it's created, unless --templates-dir chose it
+abs_dir() { local d="${1/#\~/$HOME}"; [[ "$d" == /* ]] || d="$PWD/${d#./}"; printf '%s' "$d"; }
+REL_DIR="golden/$OS_FAMILY/$LABEL"
+DIR_CONFIRMED=0
+[[ $TEMPLATES_DIR_SET -eq 1 || $ASSUME_YES -eq 1 || $PROMPT -eq 0 ]] && DIR_CONFIRMED=1
+while true; do
+    TEMPLATES_DIR="${TEMPLATES_DIR/#\~/$HOME}"
+    TDIR="$TEMPLATES_DIR/$REL_DIR"
+    if [[ -e "$TDIR" ]]; then
+        [[ $PROMPT -eq 1 ]] || die "$TDIR already exists; remove it or use another --label or --templates-dir"
+        info "$(abs_dir "$TDIR") already exists: choose another folder (or stop with Ctrl+C and use another label)"
+        ask_until TEMPLATES_DIR "Folder to write the template directory in" "" valid_text
+        DIR_CONFIRMED=1
+        continue
+    fi
+    [[ $DIR_CONFIRMED -eq 1 ]] && break
+    info "The template files are written on this computer, in $(abs_dir "$TDIR")"
+    ask_until ANSWER "Create that directory? (n to choose another folder)" y valid_yes_no
+    [[ "$ANSWER" =~ ^[yY] ]] && break
+    ask_until TEMPLATES_DIR "Folder to write the template directory in" "" valid_text
+    DIR_CONFIRMED=1
+done
+
 # Summary, the same run as one command, and the confirmation
 log "Summary"
 info "template:      $NAME ($LABEL), private"
 info "description:   $DESCRIPTION"
 info "os:            name $OS_NAME, version $OS_VERSION, login $CRED_USER with a generated password"
-info "example:       $OS_FAMILY (user-data, meta-data, network-config)"
+info "first boot:    $(files_desc)"
 if [[ -n "$IMAGE" ]]; then
     info "image:         $IMAGE ($FORMAT)"
     info "packaging:     $PACKAGE$([[ $COMPRESS -eq 1 ]] && echo ", compressed with zstd first")"
@@ -342,15 +477,18 @@ else
     info "image URL:     $IMAGE_URL"
 fi
 info "boot ISO:      $BOOT_ISO_URL"
-info "template dir:  $TEMPLATES_DIR/golden/$OS_FAMILY/$LABEL"
+info "template dir:  $(abs_dir "$TDIR")"
 if [[ $DRY_RUN -eq 1 ]]; then
     info "controller:    not changed (dry run)"
 else
-    info "controller:    ${METALCLOUD_ENDPOINT:-the one in the metalcloud-cli configuration}"
+    info "controller:    ${CONTROLLER:-${METALCLOUD_ENDPOINT:-the one in the metalcloud-cli configuration}}"
 fi
 
 cmd=(create-golden-template.sh --no-prompt --os "$OS_FAMILY" --label "$LABEL" --name "$NAME" --description "$DESCRIPTION"
      --os-name "$OS_NAME" --os-version "$OS_VERSION" --boot-iso-url "$BOOT_ISO_URL")
+[[ -z "$USER_DATA_FILE" ]] || cmd+=(--user-data "$USER_DATA_FILE")
+[[ -z "$META_DATA_FILE" ]] || cmd+=(--meta-data "$META_DATA_FILE")
+[[ -z "$NETWORK_CONFIG_FILE" ]] || cmd+=(--network-config "$NETWORK_CONFIG_FILE")
 if [[ -n "$IMAGE" ]]; then
     cmd+=(--image "$IMAGE" --package "$PACKAGE" --url-base "$URL_BASE")
     if [[ $COMPRESS -eq 1 ]]; then cmd+=(--compress); else cmd+=(--no-compress); fi
@@ -465,8 +603,6 @@ fi
 
 yaml_quote() { local v="${1//\\/\\\\}"; v="${v//\"/\\\"}"; printf '"%s"' "$v"; }
 
-REL_DIR="golden/$OS_FAMILY/$LABEL"
-TDIR="$TEMPLATES_DIR/$REL_DIR"
 log "Step 4: writing $TDIR"
 [[ ! -e "$TDIR" ]] || die "$TDIR already exists; remove it or use another --label"
 mkdir -p "$TDIR"
@@ -820,10 +956,17 @@ vlans:
 __EOF_NETWORK_CONFIG__
 }
 
-if [[ "$OS_FAMILY" == windows ]]; then write_windows_user_data > "$TDIR/user-data"; else write_linux_user_data > "$TDIR/user-data"; fi
-write_meta_data > "$TDIR/meta-data"
-write_network_config > "$TDIR/network-config"
-info "template.yaml, user-data, meta-data, network-config ($OS_FAMILY example)"
+copy_text() {  # copy_text SRC DEST: without a UTF-8 byte order mark and with LF line endings
+    if [[ "$(head -c 3 "$1" | od -An -tx1 | tr -d ' \n')" == efbbbf ]]; then tail -c +4 "$1"; else cat "$1"; fi |
+        sed $'s/\r$//' > "$2"
+}
+if [[ -n "$USER_DATA_FILE" ]]; then copy_text "$USER_DATA_FILE" "$TDIR/user-data"
+elif [[ "$OS_FAMILY" == windows ]]; then write_windows_user_data > "$TDIR/user-data"
+else write_linux_user_data > "$TDIR/user-data"; fi
+if [[ -n "$META_DATA_FILE" ]]; then copy_text "$META_DATA_FILE" "$TDIR/meta-data"; else write_meta_data > "$TDIR/meta-data"; fi
+if [[ -n "$NETWORK_CONFIG_FILE" ]]; then copy_text "$NETWORK_CONFIG_FILE" "$TDIR/network-config"
+else write_network_config > "$TDIR/network-config"; fi
+info "template.yaml, and $(files_desc)"
 info "image: $IMAGE_URL"
 info "boot ISO: $BOOT_ISO_URL"
 
@@ -831,11 +974,15 @@ info "boot ISO: $BOOT_ISO_URL"
 # Steps 5 and 6: check offline, then create
 # --------------------------------------------------------------------------------------------------------
 
-read -r -a MC <<< "$MC_CLI"
-need "${MC[0]}" "metalcloud-cli, configured with METALCLOUD_ENDPOINT and METALCLOUD_API_KEY"
+# metalcloud-cli reads every file under --dir and stops at any folder it can't read, so it gets a temporary
+# folder holding only this template, whatever else is in $TEMPLATES_DIR
+CLI_DIR="$(mktemp -d)"
+trap 'rm -rf "$CLI_DIR"' EXIT
+mkdir -p "$CLI_DIR/$REL_DIR"
+cp -- "$TDIR"/* "$CLI_DIR/$REL_DIR/"
 
 log "Step 5: checking the template offline"
-if ! listing="$("${MC[@]}" os-template list-directory --dir "$TEMPLATES_DIR" 2>&1)"; then
+if ! listing="$("${MC[@]}" os-template list-directory --dir "$CLI_DIR" 2>&1)"; then
     printf '%s\n' "$listing" >&2
     die "metalcloud-cli os-template list-directory failed"
 fi
@@ -845,11 +992,12 @@ info "metalcloud-cli parses $REL_DIR"
 
 if [[ $DRY_RUN -eq 1 ]]; then
     log "Dry run: not creating the template. To create it:"
-    info "${MC_CLI} os-template create-from-directory $REL_DIR --dir $TEMPLATES_DIR"
+    info "${MC_CLI} os-template create-from-directory $REL_DIR --dir $(printf '%q' "$TEMPLATES_DIR")"
+    info "(metalcloud-cli reads every file under --dir: give it a folder that holds only template directories)"
     exit 0
 fi
 
 log "Step 6: creating the template"
-"${MC[@]}" os-template create-from-directory "$REL_DIR" --dir "$TEMPLATES_DIR"
+"${MC[@]}" os-template create-from-directory "$REL_DIR" --dir "$CLI_DIR"
 info "The template is created private. Test it on one server (step 7), then publish it (step 8)."
 info "List its assets: ${MC_CLI} os-template get-assets <id>"
