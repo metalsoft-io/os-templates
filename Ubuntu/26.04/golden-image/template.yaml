@@ -18,8 +18,7 @@ template:
     version: 26.04
     credential:
       username: root
-      password: Setup00!
-      passwordtype: plain
+      passwordtype: generated
   tags:
     - ubuntu
 templateassets:

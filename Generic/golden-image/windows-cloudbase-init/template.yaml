@@ -1,0 +1,62 @@
+template:
+  name: Windows golden image (Cloudbase-Init)
+  label: windows-golden-image-cloudbase-init
+  description: Writes a raw or zstd-compressed sysprepped Windows disk image to the local disk; Cloudbase-Init configures it on first boot
+  visibility: private
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: oob
+    readymethod: wait_for_power_off
+  os:
+    # Must not be exactly "windows": that name makes the image builder rebuild the boot ISO as a
+    # Windows installer ISO, but the boot ISO here is MetalSoft's Linux-based boot ISO
+    name: windows-golden-image
+    version: "2022"
+    credential:
+      username: Administrator
+      passwordtype: generated
+  tags:
+    - golden-image
+    - windows
+templateassets:
+  # Virtual media 1: MetalSoft's boot ISO (volume label CIDATA). The files below are added to it per server.
+  - file:
+      name: boot-golden-image.iso
+      path: /boot-golden-image.iso
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/boot-golden-image.iso
+      templatingengine: false
+    usage: build_source_image
+  # Virtual media 2: your image ISO (volume label OSIMAGE recommended, not required). Give every image version a new file name.
+  - file:
+      name: windows-2022-golden-v1.raw.zst.iso
+      path: /windows-2022-golden-v1.raw.zst.iso
+      mimetype: application/octet-stream
+      url: https://repo.example.com/images/windows-2022-golden-v1.raw.zst.iso
+      templatingengine: false
+    usage: secondary_image
+  - file:
+      name: user-data
+      path: /user-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: meta-data
+      path: /meta-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  # Network: network-config (version 2), read by Cloudbase-Init 1.1.5 or later
+  - file:
+      name: network-config
+      path: /network-config
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component

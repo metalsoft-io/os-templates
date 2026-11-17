@@ -1,0 +1,80 @@
+#cloud-config
+{#- First boot of the golden image. cloud-init reads this from the CIDATA boot ISO, which stays attached. -#}
+{%- set si = serverInstance or {} %}
+{%- set password = si.osCredentials.initialPasswordEncrypted if si.osCredentials else '' %}
+{%- set keys = [] %}
+{%- for key in (userSSHKeys or []) %}{% if key %}{% set keys = (keys.push(key), keys) %}{% endif %}{% endfor %}
+{%- if managementSSHKey %}{% set keys = (keys.push(managementSSHKey), keys) %}{% endif %}
+{%- set bonds = [] %}
+{%- for interface in ((network.interfaces if network else []) or []) %}{% if interface.interfaceType == 'bond' %}{% set bonds = (bonds.push(interface), bonds) %}{% endif %}{% endfor %}
+
+preserve_hostname: false
+hostname: {{ (si.hostname or si.label or 'localhost') | dump | safe }}
+{%- if si.provisionInstanceDnsRecords and si.fqdn %}
+fqdn: {{ si.fqdn | dump | safe }}
+prefer_fqdn_over_hostname: true
+{%- else %}
+prefer_fqdn_over_hostname: false
+{%- endif %}
+manage_etc_hosts: true
+timezone: UTC
+
+# Keep the image's default user (ubuntu, rocky, debian, cloud-user, ...) with the SSH keys.
+# disable_root: false also puts the keys in root's authorized_keys.
+users:
+  - default
+disable_root: false
+{%- if keys | length %}
+ssh_authorized_keys:
+{%- for key in keys %}
+  - {{ key | dump | safe }}
+{%- endfor %}
+{%- endif %}
+
+{%- if password %}
+
+# root gets the password MetalSoft generated for this server (needs cloud-init 22.3 or later)
+chpasswd:
+  expire: false
+  users:
+    - name: root
+      password: {{ password | dump | safe }}
+      type: text
+{%- endif %}
+
+# Grow the root partition and filesystem to the size of the disk
+growpart:
+  mode: auto
+  devices: ["/"]
+resize_rootfs: true
+
+package_update: false
+package_upgrade: false
+
+runcmd:
+  # Provisioning is one-shot. Without this, a distro whose cloud-init still runs after the
+  # CIDATA ISO is removed may treat the server as a new instance and rewrite its network config.
+  - [touch, /etc/cloud/cloud-init.disabled]
+{#-
+  Where cloud-init writes NetworkManager files (RHEL 10, SLES 16 and others), cloud-init 26.2 and earlier
+  leave lacp_rate and xmit_hash_policy out of the bond (fixed upstream in cloud-init PR 6936). Set them
+  with nmcli; they take effect from the next boot. Elsewhere the file test is false and nothing runs.
+  The values match the ones in network-config.
+-#}
+{%- for bond in bonds %}
+  {%- set parameters = bond.parameters or {} %}
+  {%- set mode = bond.bondMode or parameters.mode or '802.3ad' %}
+  {%- if mode == '802.3ad' or mode == 'balance-xor' %}
+  {%- set name = 'bond' ~ bond.typeInterfaceId %}
+  {%- set options = 'mode=' ~ mode ~ ',miimon=' ~ (parameters.miiMonitorInterval or 100) ~ ((',lacp_rate=' ~ (parameters.lacpRate or 'fast')) if mode == '802.3ad' else '') ~ ',xmit_hash_policy=' ~ (parameters.transmitHashPolicy or 'layer3+4') %}
+  - {{ ("if [ -f /etc/NetworkManager/system-connections/cloud-init-" ~ name ~ ".nmconnection ]; then nmcli connection modify 'cloud-init " ~ name ~ "' bond.options '" ~ options ~ "'; fi") | dump | safe }}
+  {%- endif %}
+{%- endfor %}
+
+# MetalSoft's wait_for_power_off finishes the deployment when the server powers off
+power_state:
+  mode: poweroff
+  delay: now
+  message: MetalSoft provisioning complete
+  timeout: 300
+  condition: true

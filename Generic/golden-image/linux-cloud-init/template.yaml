@@ -1,0 +1,60 @@
+template:
+  name: Linux golden image (cloud-init)
+  label: linux-golden-image-cloud-init
+  description: Writes a raw or zstd-compressed Linux disk image to the local disk; cloud-init configures it on first boot
+  visibility: private
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: oob
+    readymethod: wait_for_power_off
+  os:
+    # Must not be "windows", "rhel" or "redhat": the image builder picks its build method from this name
+    name: linux-golden-image
+    version: "1.0"
+    credential:
+      username: root
+      passwordtype: generated
+  tags:
+    - golden-image
+    - linux
+templateassets:
+  # Virtual media 1: MetalSoft's boot ISO (volume label CIDATA). The files below are added to it per server.
+  - file:
+      name: boot-golden-image.iso
+      path: /boot-golden-image.iso
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/boot-golden-image.iso
+      templatingengine: false
+    usage: build_source_image
+  # Virtual media 2: your image ISO (volume label OSIMAGE recommended, not required). Give every image version a new file name.
+  - file:
+      name: linux-golden-v1.raw.zst.iso
+      path: /linux-golden-v1.raw.zst.iso
+      mimetype: application/octet-stream
+      url: https://repo.example.com/images/linux-golden-v1.raw.zst.iso
+      templatingengine: false
+    usage: secondary_image
+  - file:
+      name: user-data
+      path: /user-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: meta-data
+      path: /meta-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: network-config
+      path: /network-config
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component

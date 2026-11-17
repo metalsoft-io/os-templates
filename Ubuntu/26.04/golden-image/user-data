@@ -49,21 +49,19 @@ users:
 # ============================================================
 # Password
 #
-# "password" applies to cloud-init's default user.
+# root gets the password MetalSoft generated for this server.
+# Without one, no password is set, so root can't log in with a password.
+# SSH password logins stay as the image has them (off in Ubuntu cloud images).
 # ============================================================
 
-ssh_pwauth: true
-
-{% if serverInstance and serverInstance.osCredentials %}
-{% if serverInstance.osCredentials.initialPasswordEncrypted %}
-password: {{ serverInstance.osCredentials.initialPasswordEncrypted }}
-{% else %}
-password: Setup00!
-{% endif %}
-{% endif %}
-
+{% if serverInstance and serverInstance.osCredentials and serverInstance.osCredentials.initialPasswordEncrypted %}
 chpasswd:
   expire: false
+  users:
+    - name: root
+      password: {{ serverInstance.osCredentials.initialPasswordEncrypted | dump | safe }}
+      type: text
+{% endif %}
 
 # ============================================================
 # SSH Authorized Keys
@@ -128,9 +126,6 @@ package_reboot_if_required: false
 # ============================================================
 
 runcmd:
-
-  # Give root an empty password for local console access
-  - passwd -d root
 
   # Ensure systemd-resolved owns /etc/resolv.conf
   - rm -f /etc/resolv.conf
