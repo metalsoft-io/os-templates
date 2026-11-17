@@ -1,0 +1,90 @@
+template:
+  name: Ubuntu 24.04.3 LTS PowerFlex SDC
+  label: ubuntu-24-04-3-lts-powerflex-sdc
+  description: Ubuntu 24.04.3 LTS with PowerFlex SDC 5.1.200.112
+  visibility: private
+  device:
+    architecture: x86_64
+    bootmode: uefi
+    type: server
+  imagebuild:
+    required: true
+  install:
+    drivetype: local_drive
+    method: oob
+    readymethod: wait_for_power_off
+  os:
+    name: Ubuntu
+    version: 24.04.3
+    credential:
+      username: ubuntu
+      passwordtype: generated
+  tags:
+    - ubuntu
+    - powerflex
+templateassets:
+  - file:
+      name: grub.cfg
+      path: /boot/grub/grub.cfg
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: meta-data
+      path: /meta-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: ubuntu-24.04.3-live-server-amd64.iso
+      path: /ubuntu-24.04.3-live-server-amd64.iso
+      mimetype: application/octet-stream
+      url: https://repo.metalsoft.io/.iso/ubuntu/ubuntu-24.04.3-live-server-amd64.iso
+      templatingengine: false
+    usage: build_source_image
+  - file:
+      name: linux-modules-6.17.0-40-generic_6.17.0-40.40-24.04.1_amd64.deb
+      path: /linux-modules-6.17.0-40-generic_6.17.0-40.40-24.04.1_amd64.deb
+      mimetype: application/octet-stream
+      url: http://repo.metalsoft.io/.powerflex/linux-modules-6.17.0-40-generic_6.17.0-40.40-24.04.1_amd64.deb
+      templatingengine: false
+    usage: build_component
+  - file:
+      name: linux-image-6.17.0-40-generic_6.17.0-40.40-24.04.1_amd64.deb
+      path: /linux-image-6.17.0-40-generic_6.17.0-40.40-24.04.1_amd64.deb
+      mimetype: application/octet-stream
+      url: http://repo.metalsoft.io/.powerflex/linux-image-6.17.0-40-generic_6.17.0-40.40-24.04.1_amd64.deb
+      templatingengine: false
+    usage: build_component
+  - file:
+      name: linux-modules-extra-6.17.0-40-generic_6.17.0-40.40-24.04.1_amd64.deb
+      path: /linux-modules-extra-6.17.0-40-generic_6.17.0-40.40-24.04.1_amd64.deb
+      mimetype: application/octet-stream
+      url: http://repo.metalsoft.io/.powerflex/linux-modules-extra-6.17.0-40-generic_6.17.0-40.40-24.04.1_amd64.deb
+      templatingengine: false
+    usage: build_component
+  - file:
+      name: EMC-ScaleIO-sdc-5.1-200.112.Ubuntu.24.04.x86_64.deb
+      path: /EMC-ScaleIO-sdc-5.1-200.112.Ubuntu.24.04.x86_64.deb
+      mimetype: application/octet-stream
+      url: http://repo.metalsoft.io/.powerflex/EMC-ScaleIO-sdc-5.1-200.112.Ubuntu.24.04.x86_64.deb
+      templatingengine: false
+    usage: build_component
+  - file:
+      name: user-data
+      path: /user-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: vendor-data
+      path: /vendor-data
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
+  - file:
+      name: 01-netcfg.yaml
+      path: /01-netcfg.yaml
+      mimetype: text/plain
+      templatingengine: true
+    usage: build_component
